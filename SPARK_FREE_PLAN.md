@@ -1,41 +1,37 @@
-# Firebase Spark（免費方案）開發與上線狀態
+# Firebase Spark（免費方案）開發與部署狀態
 
-最後檢查：2026-11-15。此檔案記錄開發分支目前狀態；**目前尚未合併到 main，也尚未部署 Firebase Rules 或正式網站。**
+最後驗證：2026-11-15。此內容位於 `feature/secure-student-points` 開發分支；**尚未合併到 main，也尚未部署到正式 Firebase／GitHub Pages。**
 
-## 已實作
-- 不使用 Cloud Functions；`firebase.json` 只設定 Firestore Rules 與本機 emulator。
-- 老師登入後為名單中的學生建立 `studentAccounts/{studentId}`，保存累計獲得、累計消費、裝置 UID 及舊資料核對狀態。
-- 學生以匿名 Firebase UID 綁定裝置。首次綁定會再顯示學生姓名及鎖定提示，需確認後才寫入；同一 UID 不能自行換學生，同一學生不能由另一 UID 搶先綁定。
-- 撫摸 1、餵食 5、洗澡 10、玩耍 15、心願 6/8/12/18/22/25 分，使用 Firestore transaction 同步更新累計消費與新增帳本紀錄。
-- 老師加減分更新雲端累計獲得分數；老師畫面顯示累計獲得、累計消費、可用分數。
-- 老師可解除裝置綁定；舊 UID 會留在撤銷清單，避免重新搶綁。
-- 舊版本機消費額可從老師目前瀏覽器能讀取的資料匯入；缺少資料的學生會標記「需核對」，老師可輸入核對後的累計消費，並留下調整帳本。
-- 清空班級採維護標記及分批刪除，失敗時保留維護狀態，避免不完整清理後自動重建帳戶。
-- GitHub Actions 會檢查內嵌 JavaScript 語法並執行 Firestore Emulator 規則測試。
+## 已完成的實作
+- 使用 Firebase Authentication（匿名學生、指定老師 Email/Password）及 Cloud Firestore；不使用 Cloud Functions，符合 Spark 方案架構。
+- 老師登入時建立／遷移 `studentAccounts/{studentId}`，保存累計獲得、累計消費、裝置 UID、遷移版本及舊額核對狀態。
+- 學生首次選名時會確認姓名及裝置鎖定，再把匿名 UID 綁到學生帳戶；同一 UID 不能自行換學生，同一學生不能被第二個 UID 搶綁。
+- 撫摸 1、餵食 5、洗澡 10、玩耍 15、心願 6/8/12/18/22/25 分，使用 Firestore transaction 同步更新消費餘額及交易帳本。
+- 老師加減分會更新雲端累計獲得分數；老師畫面顯示累計獲得、累計消費及可用分數。
+- 老師可解除裝置綁定；舊 UID 會被撤銷，不能再次綁定。
+- 舊消費資料只會匯入老師目前瀏覽器／雲端文件能讀取到的內容。若無法確認，帳戶會被標記待核對，學生登入及消費會被 Firestore Rules 阻擋；老師核對後才開放。
+- 清空班級採維護標記及分批清理；中途失敗會保留維護狀態，避免部分刪除後自動重建帳戶。
+- GitHub Actions 會檢查前端內嵌 JavaScript 語法及 Firestore Emulator 規則測試；通過後才嘗試部署 Firestore Rules。
 
-## 最新自動測試
-- 最新已完成 CI：commit `4d15e3016ac9d763b7e89602c77c3a0ca2fd9d79`，語法檢查通過，Firestore Rules 19/19 通過。
-- 該次 `npm audit`：14 項中等風險、0 項高風險、0 項嚴重風險。剩餘項目屬開發／CLI 相依套件，仍需在更新 CLI 後重新檢查。
-- 首次綁定確認提示是該次 CI 後新增，必須以最新分支重新跑 CI。
-- Emulator 測試不是完整瀏覽器端到端測試，也不是正式 Firebase 專案驗收。
+## 最新驗證結果
+- 最新 CI commit：`2badb9562afe72e0920f60d30d9d4ac329eb0b1f`。
+- 前端 JavaScript 語法檢查：通過。
+- Firestore Emulator 測試：22/22 通過，包含首次綁定、舊帳戶遷移狀態、未核對餘額禁止登入／消費、跨學生讀寫、偽造積分、重複交易、並行消費、撤銷及重新綁定。
+- `npm audit`：14 項中等風險、0 項高風險、0 項嚴重風險；目前是 Firebase CLI／開發鏈的間接相依警告，仍應定期更新檢查。
+- Emulator 測試不等於真實瀏覽器端到端測試或正式 Firebase 專案驗收。
 
-## 遷移與安全限制
-1. 首次選名綁定只是裝置綁定，不是身分驗證。其他人仍可能在學生之前選取該姓名；確認對話框只減少誤選，不能證明使用者身分。
-2. 清除瀏覽器資料或換瀏覽器／裝置可能產生新 UID；需要老師解除舊裝置後重新綁定。
-3. 老師只能匯入老師目前瀏覽器或雲端名單中可讀取的舊消費資料。只存在其他學生裝置 localStorage 的資料不能遠端讀取，必須由老師逐位核對。
-4. 寵物外觀、狀態和領養資料仍主要存在學生原本瀏覽器的本機儲存；積分帳本才是此改造的雲端同步核心。
-5. 學生可讀取原有班級名單；學生只能讀取自己綁定的積分帳戶和交易紀錄，不能增加累計獲得分數。
-6. 心願價格是 Firestore Rules 中固定允許清單；改價需同步修改規則及測試。
+## 上線限制及資料注意
+1. 首次選名綁定只代表裝置綁定，不是身分驗證。其他人仍可能在學生之前選取該姓名；確認對話框只能減少誤選。
+2. 清除瀏覽器資料或換瀏覽器／裝置可能產生新 UID；需由老師解除舊裝置後再重新綁定。
+3. 其他學生裝置 localStorage 內的舊消費紀錄無法被老師瀏覽器遠端讀取。對於標記待核對的學生，老師必須逐一確認餘額；核對前系統會禁止登入及消費。
+4. 寵物外觀、狀態及領養資訊仍主要儲存在學生原本瀏覽器的本機資料；此改造的雲端同步核心是積分與消費帳本。
+5. 學生只能讀取自己綁定的積分帳戶及交易紀錄；累計獲得分數只由老師修改。
 
-## 正式部署前仍需完成
-- 以最新 head 再跑 GitHub Actions，確認首次綁定提示、維護清理等最後改動全部通過。
-- 真實瀏覽器端老師登入、學生綁定、消費扣分、老師加減分、解除／重新綁定等操作尚未實際執行；目前沒有使用者登入測試或 Firebase 專案授權可代做。
-- Firebase Rules 尚未部署至 `econ-pet`。部署需要具備 Firebase Rules 部署權限的服務帳戶授權；不可只合併網站程式就假設規則已上線。
-- 正式切換前，老師須核對所有標示「舊消費紀錄需核對」學生的餘額。
-- 部署順序應是先部署並確認 Firestore Rules，再發布 GitHub Pages 網站；目前 GitHub Pages 的部署來源設定尚未經此工具確認。
+## Firebase 部署狀態
+- 已加入部署流程：測試成功後，GitHub Actions 會檢查服務帳戶或 Firebase CLI Token，然後執行 `firebase deploy --only firestore:rules --project econ-pet`。
+- 最新部署工作已執行，但跳過實際部署，因 GitHub Repository Secrets 沒有設定授權憑證。沒有 Firebase 規則實際部署成功的紀錄。
+- 需要在 GitHub Repository Settings → Secrets and variables → Actions 設定有 Firestore Rules 部署權限的 Firebase service-account JSON secret `FIREBASE_SERVICE_ACCOUNT_ECON_PET`（建議）；舊式 CLI Token 只作相容備用。不要把密鑰貼到聊天或提交到 Git。
+- 設定授權後，向 `feature/secure-student-points` 推送新提交會重新執行測試並嘗試部署。部署成功後才應合併 PR，令 GitHub Pages 更新。
+- 真實瀏覽器操作（老師登入、學生綁定、消費、教師加減分、解除／重新綁定）尚未在本次工具連線中執行；正式切換前仍需由老師實際驗收。
 
-## 部署方式
-- Firebase 官方建議使用 Firebase CLI 的 `firebase deploy --only firestore:rules` 部署 Firestore 規則。
-- 本分支未設定 Firebase 部署服務帳戶密鑰，也未進行任何 Firebase 專案寫入或正式網站發布。
-
-**狀態：開發分支 + 自動測試通過（上一個 head）；未完成正式驗收、資料核對及部署。**
+**目前狀態：開發及自動化測試完成；Firebase 授權、資料餘額核對、真實瀏覽器驗收及正式發布未完成。**
