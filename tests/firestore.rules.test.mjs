@@ -57,24 +57,17 @@ async function seedAccount(id = "stu-a", values = {}) {
     });
   });
 }
-let inviteCounter = 0;
 async function bind(uid = "student-uid", studentId = "stu-a") {
   const db = studentDb(uid);
-  const admin = teacherDb();
-  const inviteId = "invite_" + (++inviteCounter) + "_" + uid;
-  const inviteRef = doc(admin, "studentInvites", inviteId);
-  await setDoc(inviteRef, { studentId, createdAt: serverTimestamp() });
   const batch = writeBatch(db);
   batch.set(doc(db, "devices", uid), {
     studentId,
-    inviteId,
     boundAt: serverTimestamp()
   });
   batch.update(account(db, studentId), {
     boundUid: uid,
     updatedAt: serverTimestamp()
   });
-  batch.delete(doc(db, "studentInvites", inviteId));
   await batch.commit();
 }
 async function spend({ uid = "student-uid", studentId = "stu-a", txId = "tx-1", action = "feed", amount = 5 } = {}) {
@@ -126,6 +119,20 @@ test("unbound anonymous users cannot read the classroom roster; bound students c
   await assertFails(updateDoc(doc(db, "classrooms", "economic-pet-academy"), { students: [] }));
 });
 
+test("anonymous students can read names-only directory but cannot change it", async () => {
+  const admin = teacherDb();
+  await setDoc(doc(admin, "studentDirectory", "stu-a"), {
+    name: "Student A", updatedAt: serverTimestamp()
+  });
+  const anonymous = studentDb();
+  const names = await assertSucceeds(getDocs(collection(anonymous, "studentDirectory")));
+  assert.deepEqual(names.docs.map(x => x.data().name), ["Student A"]);
+  await assertFails(setDoc(doc(anonymous, "studentDirectory", "stu-b"), {
+    name: "Student B", updatedAt: serverTimestamp()
+  }));
+  await assertFails(getDoc(doc(anonymous, "classrooms", "economic-pet-academy")));
+});
+
 test("anonymous students cannot list private student invitation records", async () => {
   await seedAccount();
   const admin = teacherDb();
@@ -153,15 +160,10 @@ test("first device binding must update both device and account atomically", asyn
   assert.equal((await getDoc(doc(db, "devices", "student-uid"))).data().studentId, "stu-a");
 });
 
-test("students cannot bind without a teacher-issued invitation", async () => {
+test("a confirmed name selection can claim an unbound student account", async () => {
   await seedAccount();
-  const db = studentDb();
-  const batch = writeBatch(db);
-  batch.set(doc(db, "devices", "student-uid"), {
-    studentId: "stu-a", inviteId: "not-a-real-invite", boundAt: serverTimestamp()
-  });
-  batch.update(account(db), { boundUid: "student-uid", updatedAt: serverTimestamp() });
-  await assertFails(batch.commit());
+  await assertSucceeds(bind());
+  assert.equal((await getDoc(account(studentDb()))).data().boundUid, "student-uid");
 });
 
 test("account without migration metadata cannot be bound", async () => {

@@ -10,6 +10,13 @@
 - 合併後 `main/index.html` 已包含 Firestore 雲端積分及學生專屬登入碼流程。
 - 專案管理者確認最新版 Firestore Rules 已在 Firebase Console 發布；這是專案管理者回報，本紀錄沒有 Firebase 端獨立版本檢查。
 
+## 本次登入方式調整（待發布）
+- 學生首頁改為從獨立的 `studentDirectory` 讀取姓名清單；只公開學生姓名，不讀取分數或寵物紀錄。
+- 學生選擇姓名後須確認「這個名字是本人」，確認後才會綁定此裝置並開啟學生頁面。
+- 老師新增學生時會同時建立姓名清單和雲端積分帳戶；不再發放一次性登入碼。
+- 此方式不是身份驗證：知道名單的人仍可能冒用姓名；同一學生首次綁定後，如需換裝置仍需老師解除舊裝置。
+- 新版 Firestore Rules 尚待發布；完成程式測試並發布規則前，不會把新版流程視為正式啟用。
+
 ## 已發布功能
 - Firebase Spark 架構：Firebase Authentication（老師 Email/Password、學生匿名登入）及 Cloud Firestore；不使用 Cloud Functions。
 - 公開首頁不顯示學生名單；未綁定匿名訪客不能讀取班級名單。
