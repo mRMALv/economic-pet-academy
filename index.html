@@ -77,7 +77,7 @@ async function sparkReleaseDevice(studentId){
 function mergeCloudState(data){
  if(!data||!Array.isArray(data.students))return;
  const localById=new Map((appState.students||[]).map(x=>[x.id,x]));
- const petFields=["petCreated","petId","conceptZH","conceptEN","adjZH","adjEN","hunger","cleanliness","happiness","habitat","fulfilledCount"];
+ const petFields=["petCreated","petId","conceptZH","conceptEN","adjZH","adjEN","hunger","cleanliness","happiness","habitat","fulfilledCount","spentScore","spendLogs"];
  const students=data.students.map(remote=>{const merged={...remote},local=localById.get(remote.id);if(local)petFields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(local,k))merged[k]=local[k];});return merged;});
  appState={students:students,logs:Array.isArray(data.logs)?data.logs:[]};saveLocalStateOnly();
  if(currentRole==="landing")renderLandingRoster();
@@ -137,14 +137,24 @@ async function adminAdjustScore(id,delta,reason){
  if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
  const stu=appState.students.find(x=>x.id===id);if(!stu)return;
  const amount=parseInt(delta,10);if(!Number.isInteger(amount)||amount===0){showToast("請輸入有效的非零整數分數！","Enter a valid non-zero integer!","⚠️");return;}
- const ref=sparkAccountRef(id),now=new Date(),time=now.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});
+ const ref=sparkAccountRef(id),classRef=classroomRef(),time=new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});
  try{
-  let nextEarned=0;
-  await firestoreDb.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)throw new Error("學生雲端帳戶不存在");const d=snap.data(),spent=Number(d.spentScore)||0,earned=Number(d.earnedScore)||0;nextEarned=Math.max(spent,earned+amount);if(nextEarned===earned)throw new Error("扣分不能令累計獲得積分低於已消費積分");tx.update(ref,{earnedScore:nextEarned,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});});
-  const oldScore=Number(stu.score)||0;stu.score=nextEarned;
-  appState.logs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:nextEarned-oldScore,reason:reason||"老師評分 Teacher Score",time:time});
-  if(appState.logs.length>50)appState.logs.pop();
-  await classroomRef().set({students:appState.students,logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  let nextEarned=0,nextStudents=[],nextLogs=[];
+  await firestoreDb.runTransaction(async tx=>{
+   const accountSnap=await tx.get(ref),classSnap=await tx.get(classRef);
+   if(!accountSnap.exists)throw new Error("學生雲端帳戶不存在");
+   const data=accountSnap.data(),spent=Number(data.spentScore)||0,earned=Number(data.earnedScore)||0;
+   nextEarned=Math.max(spent,earned+amount);
+   if(nextEarned===earned)throw new Error("扣分不能令累計獲得積分低於已消費積分");
+   const classData=classSnap.exists?classSnap.data():{};
+   nextStudents=(Array.isArray(classData.students)?classData.students:appState.students).map(x=>x.id===id?{...x,score:nextEarned}:x);
+   nextLogs=Array.isArray(classData.logs)?classData.logs.slice():appState.logs.slice();
+   nextLogs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:nextEarned-earned,reason:reason||"老師評分 Teacher Score",time:time});
+   if(nextLogs.length>50)nextLogs.pop();
+   tx.update(ref,{earnedScore:nextEarned,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+   tx.set(classRef,{students:nextStudents,logs:nextLogs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  });
+  appState.students=nextStudents;appState.logs=nextLogs;stu.score=nextEarned;saveLocalStateOnly();
   renderTeacherAdmin();showToast(stu.name+" 分數已同步更新","Student score synced",amount>0?"🌟":"📉");
  }catch(e){console.error(e);showToast(e.message||"雲端評分失敗","Cloud score update failed","⚠️");}
 }
