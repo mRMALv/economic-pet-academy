@@ -279,15 +279,22 @@ async function sparkEnsureAccounts(){
    legacySpendSnapshots.delete(stu.id);
   }else{
    const d=snap.data();stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;
-   stu.legacySpendNeedsReview=!!d.legacySpendNeedsReview;
-   if(!d.migrationVersion){
-    const localLegacy=legacySpendSnapshots.get(stu.id);
-    const localLegacyTotal=localLegacy
-     ?Math.max(Number(localLegacy.spentScore)||0,(Array.isArray(localLegacy.spendLogs)?localLegacy.spendLogs:[]).reduce((sum,item)=>sum+Math.max(0,Math.floor(Math.abs(Number(item&&item.delta)||0))),0))
-     :0;
-    const needsReview=d.legacySpendNeedsReview===true||(Number(d.spentScore)||0)>0||localLegacyTotal>0;
-    await ref.update({migrationVersion:1,legacySpendNeedsReview:needsReview,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+   const localLegacy=legacySpendSnapshots.get(stu.id);
+   const localLegacyTotal=localLegacy
+    ?Math.max(Number(localLegacy.spentScore)||0,(Array.isArray(localLegacy.spendLogs)?localLegacy.spendLogs:[]).reduce((sum,item)=>sum+Math.max(0,Math.floor(Math.abs(Number(item&&item.delta)||0))),0))
+    :0;
+   if(d.migrationVersion!==1||d.legacySpendNeedsReview===true){
+    // Earlier builds could set the review flag just because migration metadata
+    // was missing. Clear that false positive when there is no spend evidence.
+    const ledger=await ref.collection("transactions").limit(1).get();
+    const hasSpendEvidence=(Number(d.spentScore)||0)>0||localLegacyTotal>0||!ledger.empty;
+    const needsReview=hasSpendEvidence;
+    if(d.migrationVersion!==1||d.legacySpendNeedsReview!==needsReview){
+     await ref.update({migrationVersion:1,legacySpendNeedsReview:needsReview,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    }
     stu.legacySpendNeedsReview=needsReview;
+   }else{
+    stu.legacySpendNeedsReview=false;
    }
    stu.migrationVersion=1;
    legacySpendSnapshots.delete(stu.id);
