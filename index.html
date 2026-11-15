@@ -546,7 +546,13 @@ async function adminAdjustScore(id,delta,reason){
    if(nextEarned===earned)throw new Error("扣分不能令累計獲得積分低於已消費積分");
    const classData=classSnap.exists?classSnap.data():{};
    const accountReady=data.migrationVersion===1&&data.legacySpendNeedsReview===false;
-   nextStudents=(Array.isArray(classData.students)?classData.students:appState.students).map(x=>x.id===id?{...x,score:nextEarned,pointsReady:accountReady}:x);
+   // Keep the teacher's hydrated account metadata and profile fields; the public
+   // classroom roster intentionally omits private migration fields.
+   const sourceStudents=Array.isArray(appState.students)&&appState.students.length?appState.students:(Array.isArray(classData.students)?classData.students:[]);
+   nextStudents=sourceStudents.map(x=>x.id===id?{
+    ...x,score:nextEarned,spentScore:spent,migrationVersion:Number(data.migrationVersion)||0,
+    legacySpendNeedsReview:data.legacySpendNeedsReview===true,pointsReady:accountReady
+   }:{...x});
    nextLogs=Array.isArray(classData.logs)?classData.logs.slice():appState.logs.slice();
    nextLogs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:nextEarned-earned,reason:reason||"老師評分 Teacher Score",time:time});
    if(nextLogs.length>50)nextLogs.pop();
