@@ -351,7 +351,11 @@ function sparkListenAccount(studentId){
  sparkAccountUnsubscribe=sparkAccountRef(studentId).onSnapshot(snap=>{
   if(!snap.exists)return;
   const d=snap.data(),stu=appState.students.find(x=>x.id===studentId);
-  if(stu){stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;saveLocalStateOnly();if(currentRole==="student"&&lockedStudentId===studentId)renderStudentRoom();}
+  if(stu){
+   stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;
+   sparkApplyStudentProfile(stu,d);
+   saveLocalStateOnly();if(currentRole==="student"&&lockedStudentId===studentId)renderStudentRoom();
+  }
  },e=>{console.error(e);setSyncStatus("積分同步失敗",false);});
 }
 async function sparkReconcileLegacySpend(studentId){
@@ -448,6 +452,7 @@ async function enterLockedStudentMode(id,silent=false){
   if(!stu)throw new Error("找不到這位學生的班級資料，請聯絡老師。");
   if(stu.pointsReady===false||stu.legacySpendNeedsReview===true){showToast("這個學生的舊積分尚待老師核對，暫時不能登入。","Legacy points need teacher reconciliation.","⚠️");return;}
   stu.score=Number(account.earnedScore)||0;stu.spentScore=Number(account.spentScore)||0;stu.migrationVersion=Number(account.migrationVersion)||0;stu.legacySpendNeedsReview=account.legacySpendNeedsReview===true;
+  sparkApplyStudentProfile(stu,account);
   await sparkLoadTransactions(id);
   currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);
   document.getElementById("nav-student-locked").classList.remove("hidden");document.getElementById("nav-student-locked").classList.add("flex");
@@ -660,6 +665,12 @@ function sparkStudentProfilePayload(stu){
   fulfilledCount:Math.max(0,Math.floor(Number(stu.fulfilledCount)||0)),
   profileUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()
  };
+}
+function sparkApplyStudentProfile(stu,data){
+ if(!stu||!data)return;
+ ["petCreated","petId","conceptZH","conceptEN","adjZH","adjEN","hunger","cleanliness","happiness","habitat","wishId","fulfilledCount"].forEach(key=>{
+  if(Object.prototype.hasOwnProperty.call(data,key))stu[key]=data[key];
+ });
 }
 async function sparkSaveStudentProfile(stu){
  if(!stu||currentRole!=="student"||!firebaseAuth||!firebaseAuth.currentUser||!firebaseAuth.currentUser.isAnonymous)throw new Error("學生雲端登入狀態無效，請重新登入");
