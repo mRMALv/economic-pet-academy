@@ -111,7 +111,7 @@ async function enterStudentWithCode(){
   showToast("目前未能連接學生登入服務，請重新整理頁面。","Student sign-in service is unavailable.","⚠️");return;
  }
  const input=document.getElementById("student-activation-code");
- const code=String(input?.value||"").toLowerCase().replace(/[\\s-]/g,"");
+ const code=String(input?.value||"").toLowerCase().replace(/\s|-/g,"");
  if(!/^[0-9a-f]{32}$/.test(code)){
   showToast("請輸入老師提供的完整 32 位專屬登入碼。","Enter the full 32-character code from your teacher.","⚠️");return;
  }
@@ -192,22 +192,28 @@ async function sparkHashStudentCode(code){
 }
 async function sparkIssueStudentCode(studentId){
  if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
- if(classroomMaintenancePending)throw new Error("班級清理尚未完成，暫時不能發放登入碼。");
- const account=sparkAccountRef(studentId),accountSnap=await account.get();
- if(!accountSnap.exists)throw new Error("找不到學生雲端帳戶。");
- if(accountSnap.data().boundUid)throw new Error("這位學生已有綁定裝置。請先解除裝置，再發放新登入碼。");
- const student=appState.students.find(x=>x.id===studentId);
- if(!student)throw new Error("找不到學生名單資料。");
- const code=sparkGenerateStudentCode(),inviteId=await sparkHashStudentCode(code);
- const oldInvites=await firestoreDb.collection("studentInvites").where("studentId","==",studentId).get();
- const batch=firestoreDb.batch();
- oldInvites.forEach(doc=>batch.delete(doc.ref));
- batch.set(firestoreDb.collection("studentInvites").doc(inviteId),{
-  studentId:studentId,createdAt:firebase.firestore.FieldValue.serverTimestamp()
- });
- await batch.commit();
- window.alert("學生："+student.name+"\n\n專屬一次性登入碼：\n"+code+"\n\n請私下把這組登入碼交給該學生。登入碼只顯示這一次，不能公開分享。");
- return code;
+ try{
+  if(classroomMaintenancePending)throw new Error("班級清理尚未完成，暫時不能發放登入碼。");
+  const account=sparkAccountRef(studentId),accountSnap=await account.get();
+  if(!accountSnap.exists)throw new Error("找不到學生雲端帳戶。");
+  if(accountSnap.data().boundUid)throw new Error("這位學生已有綁定裝置。請先解除裝置，再發放新登入碼。");
+  const student=appState.students.find(x=>x.id===studentId);
+  if(!student)throw new Error("找不到學生名單資料。");
+  const code=sparkGenerateStudentCode(),inviteId=await sparkHashStudentCode(code);
+  const oldInvites=await firestoreDb.collection("studentInvites").where("studentId","==",studentId).get();
+  const batch=firestoreDb.batch();
+  oldInvites.forEach(doc=>batch.delete(doc.ref));
+  batch.set(firestoreDb.collection("studentInvites").doc(inviteId),{
+   studentId:studentId,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await batch.commit();
+  window.alert("學生："+student.name+"\n\n專屬一次性登入碼：\n"+code+"\n\n請私下把這組登入碼交給該學生。登入碼只顯示這一次，不能公開分享。");
+  return code;
+ }catch(e){
+  console.error("Could not issue student access code",e);
+  showToast(e.message||"發放登入碼失敗，請重試","Could not issue student access code","⚠️");
+  return null;
+ }
 }
 
 async function sparkEnsureAccounts(){
