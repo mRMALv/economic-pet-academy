@@ -225,6 +225,7 @@ async function sparkBindStudent(studentId){
   if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("裝置綁定資料不一致，請聯絡老師");
   return accountSnap.data();
  }
+ if(!window.confirm("你選擇的是「"+(appState.students.find(x=>x.id===studentId)?.name||"這位學生")+"」。\n\n確認後，這個瀏覽器會綁定到該學生帳戶，之後不能自行切換其他學生；如選錯或換裝置，請聯絡老師解除綁定。\n\n確定要綁定嗎？"))throw new Error("你已取消學生裝置綁定");
  const batch=firestoreDb.batch();
  batch.set(device,{studentId:studentId,boundAt:firebase.firestore.FieldValue.serverTimestamp()});
  batch.update(account,{boundUid:uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
