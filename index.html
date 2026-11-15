@@ -314,7 +314,6 @@ async function sparkBindStudent(studentId){
  if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("學生積分帳戶尚未完成初始化，請聯絡老師");
  return accountSnap.data();
 }
-async function sparkSpend(
 async function sparkSpend(studentId,action,amount,reason){
  const uid=firebaseAuth.currentUser.uid,account=sparkAccountRef(studentId);
  const id="tx_"+Date.now()+"_"+Math.random().toString(36).slice(2,10),ledger=sparkTxRef(studentId,id);
