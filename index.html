@@ -39,7 +39,7 @@ body{font-family:'Inter','Noto Sans TC',sans-serif;overflow-x:hidden}
 <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
 <section id="view-landing" class="max-w-5xl mx-auto"><div class="text-center mb-8"><span class="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold mb-2">🎓 互動經濟學課堂 · Interactive Economics Classroom</span><h2 class="text-2xl sm:text-4xl font-black">歡迎來到經濟學萌寵學院！<span class="block text-base sm:text-lg text-amber-600 mt-1">Welcome to Economic Pet Academy</span></h2><p class="text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto mt-2">選擇你的身分進入系統。學生登入後將鎖定為個人專屬帳號；老師後台需密碼驗證後方可加扣分。</p></div>
  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-  <div class="lg:col-span-8 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-amber-100"><div class="flex items-center justify-between flex-wrap gap-2 mb-4 pb-3 border-b"><div><h3 class="text-lg sm:text-xl font-black">🐾 我是學生 · Student Login</h3><p class="text-xs text-slate-500">點擊你的名字登入，或建立新學生帳號</p></div><span class="px-3 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-[11px] font-bold">🔒 防切換鎖定機制</span></div><p class="text-xs font-extrabold text-slate-600 mb-2.5">📋 班級名單快速登入 / Class Roster:</p><div id="landing-roster-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1 mb-6"></div><div class="bg-amber-50/80 rounded-2xl p-4 border border-amber-200"><p class="text-xs font-extrabold text-amber-900">✨ 不在名單上？請老師先在後台新增你的名字。 / Ask your teacher to add your name to the class roster.</p></div></div>
+  <div class="lg:col-span-8 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-amber-100"><div class="flex items-center justify-between flex-wrap gap-2 mb-4 pb-3 border-b"><div><h3 class="text-lg sm:text-xl font-black">🐾 我是學生 · Student Login</h3><p class="text-xs text-slate-500">請輸入老師私下發給你的專屬學生登入碼</p></div><span class="px-3 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-[11px] font-bold">🔒 防切換鎖定機制</span></div><div id="landing-roster-grid" class="mb-6"><label for="student-activation-code" class="block text-xs font-extrabold text-slate-600 mb-2">🔑 輸入學生專屬登入碼 / Student access code</label><input id="student-activation-code" type="text" maxlength="39" autocomplete="one-time-code" placeholder="請輸入老師發給你的 32 位登入碼" class="w-full px-4 py-3 rounded-xl border text-sm font-mono tracking-wider"><button onclick="enterStudentWithCode()" class="mt-3 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black">🔐 使用登入碼進入學生帳戶</button></div><div class="bg-amber-50/80 rounded-2xl p-4 border border-amber-200"><p class="text-xs font-extrabold text-amber-900">✨ 登入碼由老師個別發放，只能使用一次。請勿轉發或公開分享。 / Your teacher provides a private one-time code. Do not share it.</p></div></div>
   <div class="lg:col-span-4 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-3xl shadow-xl p-6 sm:p-8 text-white flex flex-col justify-between"><div><div class="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-3xl mb-4">👩‍🏫</div><h3 class="text-xl font-black">老師管理後台</h3><p class="text-xs text-indigo-200 mt-0.5">Teacher Admin Portal</p><ul class="mt-5 space-y-2.5 text-xs text-indigo-100"><li>✅ 根據課堂表現加扣分</li><li>✅ 查看全班寵物養成進度與積分</li><li>✅ 發送全班或個別寵物心願</li><li>🔐 需使用老師專屬 Email 登入</li></ul></div><button onclick="openTeacherPasscodeModal()" class="mt-6 w-full py-3.5 rounded-2xl bg-white text-indigo-700 font-black text-sm">🔐 老師帳號登入</button></div>
  </div>
 </section>
@@ -102,15 +102,42 @@ async function bootApplication(){loadLocalData();const saved=sessionStorage.getI
 function switchView(id){["view-landing","view-student-wizard","view-student-room","view-teacher-admin"].forEach(x=>document.getElementById(x).classList.add("hidden"));document.getElementById(id).classList.remove("hidden");}
 function getLockedStudent(){return appState.students.find(s=>s.id===lockedStudentId);}
 function renderLandingRoster(){
+ // The public landing page never exposes the class roster.
  const grid=document.getElementById("landing-roster-grid");
- grid.innerHTML=appState.students.map(stu=>{
-  const pet=PET_SPECIES.find(p=>p.id===stu.petId);
-  const blocked=stu.pointsReady===false||stu.legacySpendNeedsReview===true;
-  return `
-<button ${blocked?"disabled":""} onclick="enterLockedStudentMode('${stu.id}',false)" class="flex items-center justify-between p-3 rounded-2xl border border-slate-200 text-left shadow-sm ${blocked?"bg-slate-100 opacity-70 cursor-not-allowed":"bg-slate-50 hover:bg-amber-50"}">
-<div class="flex items-center gap-3"><div class="w-11 h-11 rounded-xl bg-white border p-1 flex items-center justify-center text-3xl">${pet?pet.emoji:"🥚"}</div><div><p class="text-sm font-black">${escapeHTML(stu.name)}</p><p class="text-[11px] text-slate-500">${blocked?"舊積分待老師核對":(stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物 Not Adopted Yet")}</p></div></div><span class="px-2.5 py-1 rounded-full ${blocked?"bg-slate-200 text-slate-700":"bg-amber-100 text-amber-900"} text-xs font-black">${blocked?"暫停登入":(Number(stu.score)||0)+" 累計分"}</span></button>`;
- }).join("")||'<p class="text-xs text-slate-400">目前沒有學生，請新增帳號。</p>';
+ if(grid)grid.classList.remove("grid","grid-cols-1","sm:grid-cols-2","gap-3","max-h-72","overflow-y-auto","pr-1");
 }
+async function enterStudentWithCode(){
+ if(!firestoreDb||!firebaseAuth||!firebaseAuth.currentUser?.isAnonymous){
+  showToast("目前未能連接學生登入服務，請重新整理頁面。","Student sign-in service is unavailable.","⚠️");return;
+ }
+ const input=document.getElementById("student-activation-code");
+ const code=String(input?.value||"").toLowerCase().replace(/[\\s-]/g,"");
+ if(!/^[0-9a-f]{32}$/.test(code)){
+  showToast("請輸入老師提供的完整 32 位專屬登入碼。","Enter the full 32-character code from your teacher.","⚠️");return;
+ }
+ try{
+  setSyncStatus("正在驗證專屬登入碼…",false);
+  const inviteId=await sparkHashStudentCode(code);
+  const inviteSnap=await firestoreDb.collection("studentInvites").doc(inviteId).get();
+  if(!inviteSnap.exists)throw new Error("登入碼無效、已使用或已被老師撤銷。");
+  const studentId=inviteSnap.data().studentId;
+  if(typeof studentId!=="string"||!studentId)throw new Error("登入碼資料無效，請聯絡老師。");
+  await sparkBindStudent(studentId,inviteId);
+  const classSnap=await classroomRef().get();
+  if(!classSnap.exists)throw new Error("尚未建立班級資料，請聯絡老師。");
+  mergeCloudState(classSnap.data());
+  if(!appState.students.some(x=>x.id===studentId))throw new Error("找不到你的學生資料，請聯絡老師。");
+  if(input)input.value="";
+  listenCloudState();
+  await enterLockedStudentMode(studentId,true);
+  showToast("登入成功！已連接你的學生帳戶。","Student account connected.","🔒");
+ }catch(e){
+  console.error("Student code sign-in failed",e);
+  showToast(e.message||"登入碼驗證失敗，請向老師確認。","Could not validate student code.","⚠️");
+  setSyncStatus("尚未登入學生帳戶",false);
+ }
+}
+
 function registerAndLoginStudent(){showToast("請老師先在後台新增你的名字！","Ask your teacher to add you to the roster first.","👩‍🏫");}
 function enterLockedStudentMode(id,silent=false){const stu=appState.students.find(s=>s.id===id);if(!stu)return;currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);document.getElementById("nav-student-locked").classList.remove("hidden");document.getElementById("nav-student-locked").classList.add("flex");document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");updateTopNavForStudent(stu);if(!silent)showToast("已鎖定學生帳號："+stu.name,"Locked to student account","🔒");if(!stu.petCreated)openPetWizard(false);else{switchView("view-student-room");renderStudentRoom();}}
 function updateTopNavForStudent(stu){document.getElementById("nav-student-label").textContent="🔒 學生："+stu.name;document.getElementById("nav-student-score").textContent=getAvailableScore(stu)+" 可用分";}
@@ -225,7 +252,7 @@ async function sparkEnsureAccounts(){
  await classroomRef().set({students:sparkPublicRoster(appState.students),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
  saveLocalStateOnly();
 }
-async function sparkBindStudent(studentId){
+async function sparkBindStudent(studentId,inviteId=null){
  const user=firebaseAuth&&firebaseAuth.currentUser;
  if(!user||!user.isAnonymous)throw new Error("學生登入狀態無效，請重新整理");
  const uid=user.uid,device=sparkDeviceRef(uid),account=sparkAccountRef(studentId);
@@ -234,17 +261,22 @@ async function sparkBindStudent(studentId){
   if(deviceSnap.data().studentId!==studentId)throw new Error("這部裝置已綁定其他帳戶，請聯絡老師");
   const accountSnap=await account.get();
   if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("裝置綁定資料不一致，請聯絡老師");
-  if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("舊積分尚待老師核對或初始化，請聯絡老師");
+  if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("學生積分帳戶尚未完成初始化，請聯絡老師");
   return accountSnap.data();
  }
- if(!window.confirm("你選擇的是「"+(appState.students.find(x=>x.id===studentId)?.name||"這位學生")+"」。\n\n確認後，這個瀏覽器會綁定到該學生帳戶，之後不能自行切換其他學生；如選錯或換裝置，請聯絡老師解除綁定。\n\n確定要綁定嗎？"))throw new Error("你已取消學生裝置綁定");
+ if(!inviteId)throw new Error("首次登入必須使用老師發放的專屬登入碼。");
+ const inviteRef=firestoreDb.collection("studentInvites").doc(inviteId);
+ const inviteSnap=await inviteRef.get();
+ if(!inviteSnap.exists||inviteSnap.data().studentId!==studentId)throw new Error("登入碼無效或已使用，請向老師確認。");
+ if(!window.confirm("確定使用老師發給你的專屬登入碼，將這部裝置綁定到你的學生帳戶嗎？綁定後不能自行切換學生；如需更換裝置，請聯絡老師。"))throw new Error("你已取消學生裝置綁定");
  const batch=firestoreDb.batch();
- batch.set(device,{studentId:studentId,boundAt:firebase.firestore.FieldValue.serverTimestamp()});
+ batch.set(device,{studentId:studentId,inviteId:inviteId,boundAt:firebase.firestore.FieldValue.serverTimestamp()});
  batch.update(account,{boundUid:uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ batch.delete(inviteRef);
  await batch.commit();
  const accountSnap=await account.get();
  if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("學生帳戶綁定未能確認，請聯絡老師");
- if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("舊積分尚待老師核對或初始化，請聯絡老師");
+ if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("學生積分帳戶尚未完成初始化，請聯絡老師");
  return accountSnap.data();
 }
 async function sparkSpend(studentId,action,amount,reason){
