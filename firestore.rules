@@ -1,24 +1,179 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
     function isTeacher() {
-      return request.auth != null
+      return signedIn()
         && request.auth.token.email == "mariannamangyh@gmail.com"
         && request.auth.token.email_verified == true
         && request.auth.token.firebase.sign_in_provider == "password";
     }
 
-    function isClassroomUser() {
-      return request.auth != null
-        && (
-          request.auth.token.firebase.sign_in_provider == "anonymous"
-          || isTeacher()
-        );
+    function isAnonymousStudent() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
+    function devicePath(uid) {
+      return /databases/$(database)/documents/devices/$(uid);
+    }
+
+    function accountPath(studentId) {
+      return /databases/$(database)/documents/studentAccounts/$(studentId);
+    }
+
+    function revokedDevicePath(uid) {
+      return /databases/$(database)/documents/revokedDevices/$(uid);
+    }
+
+    function studentInvitePath(inviteId) {
+      return /databases/$(database)/documents/studentInvites/$(inviteId);
+    }
+
+    function isBoundStudentSession() {
+      return isAnonymousStudent()
+        && exists(devicePath(request.auth.uid))
+        && get(devicePath(request.auth.uid)).data.studentId is string
+        && isBoundStudent(get(devicePath(request.auth.uid)).data.studentId);
+    }
+
+    function isBoundStudent(studentId) {
+      return isAnonymousStudent()
+        && exists(devicePath(request.auth.uid))
+        && get(devicePath(request.auth.uid)).data.studentId == studentId
+        && exists(accountPath(studentId))
+        && get(accountPath(studentId)).data.boundUid == request.auth.uid;
+    }
+
+    function isStudentAccountReady(account) {
+      return account.migrationVersion == 1
+        && account.legacySpendNeedsReview == false;
+    }
+
+    function validSpendAction(action, amount) {
+      return (action == "pet" && amount == 1)
+        || (action == "feed" && amount == 5)
+        || (action == "bathe" && amount == 10)
+        || (action == "play" && amount == 15)
+        || (action == "wish" && [6, 8, 12, 18, 22, 25].hasAny([amount]));
     }
 
     match /classrooms/{classroomId} {
-      allow read: if isClassroomUser();
+      // The roster is private: teachers and already-bound students only.
+      allow read: if isTeacher() || isBoundStudentSession();
       allow create, update, delete: if isTeacher();
+    }
+
+    match /studentInvites/{inviteId} {
+      // A student can retrieve only a code-hash document whose random ID they know.
+      // Listing invite documents is teacher-only; the raw code is never stored.
+      allow get: if isAnonymousStudent();
+      allow list: if isTeacher();
+      allow create, update: if isTeacher()
+        && request.resource.data.keys().hasAll(['studentId', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['studentId', 'createdAt'])
+        && request.resource.data.studentId is string
+        && request.resource.data.createdAt is timestamp;
+      allow delete: if isTeacher() || (
+        isAnonymousStudent()
+        && getAfter(devicePath(request.auth.uid)).data.inviteId == inviteId
+        && getAfter(devicePath(request.auth.uid)).data.studentId == resource.data.studentId
+        && getAfter(accountPath(resource.data.studentId)).data.boundUid == request.auth.uid
+      );
+    }
+
+    match /revokedDevices/{uid} {
+      allow get: if isTeacher() || (signedIn() && request.auth.uid == uid);
+      allow list: if isTeacher();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /devices/{uid} {
+      allow get: if isTeacher() || (signedIn() && request.auth.uid == uid);
+      allow list: if isTeacher();
+      // A UID that a teacher revoked can never claim another student account.
+      allow create: if isAnonymousStudent()
+        && request.auth.uid == uid
+        && !exists(revokedDevicePath(uid))
+        && request.resource.data.keys().hasAll(['studentId', 'inviteId', 'boundAt'])
+        && request.resource.data.keys().hasOnly(['studentId', 'inviteId', 'boundAt'])
+        && request.resource.data.studentId is string
+        && request.resource.data.inviteId is string
+        && exists(studentInvitePath(request.resource.data.inviteId))
+        && get(studentInvitePath(request.resource.data.inviteId)).data.studentId == request.resource.data.studentId
+        && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid
+        && isStudentAccountReady(getAfter(accountPath(request.resource.data.studentId)).data);
+      allow update, delete: if isTeacher();
+    }
+
+    match /studentAccounts/{studentId} {
+      // Anonymous users may only look up an account that is still unbound.
+      // Students can read only the account bound to their own anonymous UID.
+      // First-time binding is attempted as an atomic write, so unbound accounts need not be readable.
+      allow get: if isTeacher() || isBoundStudent(studentId);
+      allow list: if isTeacher();
+
+      allow create, delete: if isTeacher();
+
+      allow update: if isTeacher()
+        || (
+          isAnonymousStudent()
+          && resource.data.boundUid == null
+          && isStudentAccountReady(resource.data)
+          && request.resource.data.boundUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['boundUid', 'updatedAt'])
+          && getAfter(devicePath(request.auth.uid)).data.studentId == studentId
+          && getAfter(devicePath(request.auth.uid)).data.inviteId is string
+          && exists(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId))
+          && get(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId)).data.studentId == studentId
+          && !existsAfter(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId))
+          && !exists(revokedDevicePath(request.auth.uid))
+        )
+        || (
+          isBoundStudent(studentId)
+          && isStudentAccountReady(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spentScore', 'lastTransactionId', 'updatedAt'])
+          && request.resource.data.earnedScore == resource.data.earnedScore
+          && request.resource.data.boundUid == resource.data.boundUid
+          && request.resource.data.spentScore is int
+          && request.resource.data.spentScore > resource.data.spentScore
+          && request.resource.data.spentScore <= request.resource.data.earnedScore
+          && request.resource.data.lastTransactionId is string
+          && request.resource.data.lastTransactionId != resource.data.lastTransactionId
+          && getAfter(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(request.resource.data.lastTransactionId)).data.amount
+             == request.resource.data.spentScore - resource.data.spentScore
+          && getAfter(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(request.resource.data.lastTransactionId)).data.uid
+             == request.auth.uid
+        );
+
+      match /transactions/{transactionId} {
+        allow read: if isTeacher() || isBoundStudent(studentId);
+        // Teachers may append legacy-import entries during the one-time migration.
+        // Students can never manufacture migration records.
+        allow create: if isTeacher() || (
+          isBoundStudent(studentId)
+          && isStudentAccountReady(get(accountPath(studentId)).data)
+          && !exists(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(transactionId))
+          && request.resource.data.keys().hasAll(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
+          && request.resource.data.studentId == studentId
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.action is string
+          && request.resource.data.amount is int
+          && validSpendAction(request.resource.data.action, request.resource.data.amount)
+          && request.resource.data.reason is string
+          && request.resource.data.reason.size() <= 120
+          && request.resource.data.createdAt is timestamp
+          && getAfter(accountPath(studentId)).data.lastTransactionId == transactionId
+          && getAfter(accountPath(studentId)).data.spentScore
+             == get(accountPath(studentId)).data.spentScore + request.resource.data.amount
+        );
+        allow update: if false;
+        allow delete: if isTeacher();
+      }
     }
   }
 }

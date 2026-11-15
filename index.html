@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>經濟學萌寵學院 | Economic Pet Academy</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.3.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.3.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
 body{font-family:'Inter','Noto Sans TC',sans-serif;overflow-x:hidden}
@@ -39,7 +39,7 @@ body{font-family:'Inter','Noto Sans TC',sans-serif;overflow-x:hidden}
 <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
 <section id="view-landing" class="max-w-5xl mx-auto"><div class="text-center mb-8"><span class="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold mb-2">🎓 互動經濟學課堂 · Interactive Economics Classroom</span><h2 class="text-2xl sm:text-4xl font-black">歡迎來到經濟學萌寵學院！<span class="block text-base sm:text-lg text-amber-600 mt-1">Welcome to Economic Pet Academy</span></h2><p class="text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto mt-2">選擇你的身分進入系統。學生登入後將鎖定為個人專屬帳號；老師後台需密碼驗證後方可加扣分。</p></div>
  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-  <div class="lg:col-span-8 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-amber-100"><div class="flex items-center justify-between flex-wrap gap-2 mb-4 pb-3 border-b"><div><h3 class="text-lg sm:text-xl font-black">🐾 我是學生 · Student Login</h3><p class="text-xs text-slate-500">點擊你的名字登入，或建立新學生帳號</p></div><span class="px-3 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-[11px] font-bold">🔒 防切換鎖定機制</span></div><p class="text-xs font-extrabold text-slate-600 mb-2.5">📋 班級名單快速登入 / Class Roster:</p><div id="landing-roster-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1 mb-6"></div><div class="bg-amber-50/80 rounded-2xl p-4 border border-amber-200"><p class="text-xs font-extrabold text-amber-900">✨ 不在名單上？請老師先在後台新增你的名字。 / Ask your teacher to add your name to the class roster.</p></div></div>
+  <div class="lg:col-span-8 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-amber-100"><div class="flex items-center justify-between flex-wrap gap-2 mb-4 pb-3 border-b"><div><h3 class="text-lg sm:text-xl font-black">🐾 我是學生 · Student Login</h3><p class="text-xs text-slate-500">請輸入老師私下發給你的專屬學生登入碼</p></div><span class="px-3 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-[11px] font-bold">🔒 防切換鎖定機制</span></div><div id="landing-roster-grid" class="mb-6"><label for="student-activation-code" class="block text-xs font-extrabold text-slate-600 mb-2">🔑 輸入學生專屬登入碼 / Student access code</label><input id="student-activation-code" type="text" maxlength="39" autocomplete="one-time-code" placeholder="請輸入老師發給你的 32 位登入碼" class="w-full px-4 py-3 rounded-xl border text-sm font-mono tracking-wider"><button onclick="enterStudentWithCode()" class="mt-3 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black">🔐 使用登入碼進入學生帳戶</button></div><div class="bg-amber-50/80 rounded-2xl p-4 border border-amber-200"><p class="text-xs font-extrabold text-amber-900">✨ 登入碼由老師個別發放，只能使用一次。請勿轉發或公開分享。 / Your teacher provides a private one-time code. Do not share it.</p></div></div>
   <div class="lg:col-span-4 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-3xl shadow-xl p-6 sm:p-8 text-white flex flex-col justify-between"><div><div class="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-3xl mb-4">👩‍🏫</div><h3 class="text-xl font-black">老師管理後台</h3><p class="text-xs text-indigo-200 mt-0.5">Teacher Admin Portal</p><ul class="mt-5 space-y-2.5 text-xs text-indigo-100"><li>✅ 根據課堂表現加扣分</li><li>✅ 查看全班寵物養成進度與積分</li><li>✅ 發送全班或個別寵物心願</li><li>🔐 需使用老師專屬 Email 登入</li></ul></div><button onclick="openTeacherPasscodeModal()" class="mt-6 w-full py-3.5 rounded-2xl bg-white text-indigo-700 font-black text-sm">🔐 老師帳號登入</button></div>
  </div>
 </section>
@@ -49,7 +49,7 @@ body{font-family:'Inter','Noto Sans TC',sans-serif;overflow-x:hidden}
 <div class="lg:col-span-5 space-y-5"><div class="bg-white rounded-3xl shadow-xl p-6 border"><h3 class="font-black mb-4">📊 寵物狀態指標 / Pet Status</h3><div class="space-y-4"><div><div class="flex justify-between text-xs font-bold"><span>🍙 飽食度 Satiety</span><span id="stat-hunger-text">50%</span></div><div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div id="stat-hunger-bar" class="h-full bg-emerald-500" style="width:50%"></div></div></div><div><div class="flex justify-between text-xs font-bold"><span>🫧 清潔度 Cleanliness</span><span id="stat-clean-text">50%</span></div><div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div id="stat-clean-bar" class="h-full bg-sky-500" style="width:50%"></div></div></div><div><div class="flex justify-between text-xs font-bold"><span>💖 心情指數 Happiness</span><span id="stat-happy-text">50%</span></div><div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div id="stat-happy-bar" class="h-full bg-pink-500" style="width:50%"></div></div></div></div></div>
 <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl shadow-xl p-6 border-2 border-purple-200"><div class="flex items-center justify-between gap-2 mb-3"><span class="px-3 py-1 rounded-full bg-purple-600 text-white text-xs font-black">💌 寵物隨機心願</span><button onclick="rollNewPetRequest()" class="text-xs font-bold text-purple-700 underline">🔄 換一個心願</button></div><div class="bg-white/90 rounded-2xl p-4 border"><div class="flex items-start gap-3"><span id="wish-icon" class="text-3xl">🍱</span><div><p id="wish-title-zh" class="text-sm font-black"></p><p id="wish-title-en" class="text-xs text-slate-500"></p><div class="mt-2 text-xs font-extrabold">🎯 達成門檻：<span id="wish-req-score"></span></div></div></div><button id="btn-fulfill-wish" onclick="fulfillPetRequest()" class="mt-4 w-full py-3 rounded-xl font-black text-sm"></button></div><div class="mt-3 flex justify-between text-xs font-bold"><span>🏆 已完成心願次數:</span><span id="wish-fulfilled-count">0 次</span></div></div>
 <div class="bg-white rounded-3xl shadow-xl p-6 border"><h3 class="text-sm font-black mb-3">📜 我的老師評分紀錄 / My Score Log</h3><div id="student-score-log" class="space-y-2 max-h-48 overflow-y-auto text-xs"></div></div></div></div></section>
-<section id="view-teacher-admin" class="hidden space-y-6"><div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border"><div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b"><div><span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-extrabold">👩‍🏫 教師專屬管理權限</span><h2 class="text-2xl font-black mt-2">課堂表現評分與全班萌寵管理後台</h2><p class="text-sm text-slate-500">Classroom Scoring & Pet Requests</p><p class="text-[11px] text-slate-500 mt-1">老師顯示的是累計獲得積分；學生的照護消耗額會在學生自己的裝置計算。</p></div><div class="flex flex-wrap gap-2"><button onclick="triggerClassWideRequest()" class="px-4 py-2.5 rounded-2xl bg-purple-600 text-white text-xs font-extrabold">💌 全班發送隨機寵物心願</button><button onclick="adminClearAllRecords()" class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold">🗑️ 清空全班紀錄</button></div></div><div class="mt-5 bg-slate-50 rounded-2xl p-4 border flex flex-col sm:flex-row gap-3"><span class="text-xs font-black">➕ 新增學生:</span><input id="admin-new-student-name" type="text" placeholder="輸入學生姓名" onkeydown="if(event.key==='Enter')adminAddStudent()" class="flex-1 px-3.5 py-2 rounded-xl border text-sm"><button onclick="adminAddStudent()" class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-black">加入名單 Add</button></div></div><div class="grid grid-cols-1 xl:grid-cols-12 gap-6"><div class="xl:col-span-8 space-y-4" id="admin-students-list"></div><div class="xl:col-span-4"><div class="bg-white rounded-3xl shadow-xl p-6 border sticky top-24"><h3 class="text-base font-black mb-4">📋 全班累計獲得積分</h3><div id="admin-activity-log" class="space-y-2.5 max-h-[540px] overflow-y-auto text-xs"></div></div></div></div></section>
+<section id="view-teacher-admin" class="hidden space-y-6"><div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border"><div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b"><div><span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-extrabold">👩‍🏫 教師專屬管理權限</span><h2 class="text-2xl font-black mt-2">課堂表現評分與全班萌寵管理後台</h2><p class="text-sm text-slate-500">Classroom Scoring & Pet Requests</p><p class="text-[11px] text-slate-500 mt-1">老師可查看累計獲得、雲端累計消費及可用餘額；學生消費會同步到雲端。</p><p class="mt-2 text-xs font-bold text-amber-700">資料切換提醒：只有此瀏覽器可讀取的舊消費紀錄會自動匯入；其他裝置的舊紀錄不會憑空出現在雲端，請先核對每位學生餘額。</p></div><div class="flex flex-wrap gap-2"><button onclick="triggerClassWideRequest()" class="px-4 py-2.5 rounded-2xl bg-purple-600 text-white text-xs font-extrabold">💌 全班發送隨機寵物心願</button><button onclick="adminClearAllRecords()" class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold">🗑️ 清空全班紀錄</button></div></div><div class="mt-5 bg-slate-50 rounded-2xl p-4 border flex flex-col sm:flex-row gap-3"><span class="text-xs font-black">➕ 新增學生:</span><input id="admin-new-student-name" type="text" placeholder="輸入學生姓名" onkeydown="if(event.key==='Enter')adminAddStudent()" class="flex-1 px-3.5 py-2 rounded-xl border text-sm"><button onclick="adminAddStudent()" class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-black">加入名單 Add</button></div></div><div class="grid grid-cols-1 xl:grid-cols-12 gap-6"><div class="xl:col-span-8 space-y-4" id="admin-students-list"></div><div class="xl:col-span-4"><div class="bg-white rounded-3xl shadow-xl p-6 border sticky top-24"><h3 class="text-base font-black mb-4">📋 全班累計獲得積分</h3><div id="admin-activity-log" class="space-y-2.5 max-h-[540px] overflow-y-auto text-xs"></div></div></div></div></section>
 </main>
 <script>
 const TEACHER_EMAIL="mariannamangyh@gmail.com";
@@ -86,7 +86,7 @@ const HABITATS=[{id:"meadow",zh:"陽光草地",icon:"☀️"},{id:"woodroom",zh:
 const WISH_POOL=[{id:"w1",icon:"🍱",zh:"想吃豪華經濟學壽司拼盤",en:"Deluxe Economics Sushi Platter",req:8},{id:"w2",icon:"🌸",zh:"想去櫻花公園野餐喝下午茶",en:"Picnic at Cherry Blossom Park",req:12},{id:"w3",icon:"🧮",zh:"想要閃亮亮黃金算盤玩具",en:"Shiny Golden Abacus Toy",req:18},{id:"w4",icon:"👑",zh:"想要「經濟學小博士」皇冠",en:"Little Econ PhD Crown",req:22},{id:"w5",icon:"🍰",zh:"想吃雙層草莓蛋糕",en:"Double Strawberry Cake",req:6},{id:"w6",icon:"🚀",zh:"想搭火箭探索宏觀經濟宇宙",en:"Explore Macroeconomics Space",req:25}];
 let appState={students:[{id:"stu_1",name:"陳大文 Chan Tai Man",petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,hunger:50,cleanliness:50,happiness:50,habitat:"meadow",wishId:"w2",fulfilledCount:0},{id:"stu_2",name:"李小思 Chloe Lee",petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,hunger:50,cleanliness:50,happiness:50,habitat:"sakura",wishId:"w1",fulfilledCount:0}],logs:[]};
 let currentRole="landing",lockedStudentId=null,wizardState={petId:"fox",conceptZH:"機會成本",conceptEN:"Opportunity Cost",adjZH:"精明的",adjEN:"Savvy",isEditingExisting:false},toastTimer=null;
-window.addEventListener("DOMContentLoaded",()=>{bootApplication();});
+
 function loadLocalData(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const parsed=JSON.parse(raw);if(parsed&&Array.isArray(parsed.students))appState=parsed;}}catch(e){console.warn("Local data could not be loaded",e);}}
 function persistState(){saveLocalStateOnly();if(currentRole==="teacher"&&isVerifiedTeacher(firebaseAuth?.currentUser)&&firestoreDb){const payload={students:appState.students,logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};classroomRef().set(payload,{merge:true}).then(()=>setSyncStatus("雲端同步正常",true)).catch(e=>{console.error("Cloud save failed",e);showToast("雲端儲存失敗，請檢查連線","Cloud save failed","⚠️");setSyncStatus("雲端儲存錯誤",false);});}}
 function escapeHTML(str){return String(str||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
@@ -96,14 +96,48 @@ function classroomRef(){return firestoreDb.collection("classrooms").doc("economi
 function setSyncStatus(label,connected=false){const pill=document.getElementById("sync-status-pill");if(!pill)return;const dot=pill.querySelector("span:first-child"),text=document.getElementById("sync-text");pill.className="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border "+(connected?"bg-emerald-50 border-emerald-200 text-emerald-700":"bg-amber-50 border-amber-200 text-amber-700");if(dot)dot.className="w-2 h-2 rounded-full "+(connected?"bg-emerald-500":"bg-amber-500");if(text)text.textContent=label;}
 function saveLocalStateOnly(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(appState));}catch(e){showToast("無法儲存本機資料","Local storage unavailable","⚠️");}}
 function initializeFirebaseServices(){try{if(typeof firebase==="undefined"||!firebase.initializeApp)throw new Error("Firebase SDK unavailable");if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);firebaseAuth=firebase.auth();firestoreDb=firebase.firestore();return true;}catch(e){console.error("Firebase initialization failed",e);setSyncStatus("本機展示模式",false);return false;}}
-function mergeCloudState(data){if(!data||!Array.isArray(data.students))return;const localById=new Map((appState.students||[]).map(s=>[s.id,s]));const localPetFields=["petCreated","petId","conceptZH","conceptEN","adjZH","adjEN","hunger","cleanliness","happiness","habitat","fulfilledCount","spentScore","spendLogs"];const students=data.students.map(remote=>{const merged={...remote},local=localById.get(remote.id);if(local)localPetFields.forEach(key=>{if(Object.prototype.hasOwnProperty.call(local,key))merged[key]=local[key];});return merged;});appState={students,logs:Array.isArray(data.logs)?data.logs:[]};saveLocalStateOnly();if(currentRole==="landing")renderLandingRoster();else if(currentRole==="student"){const selected=appState.students.some(s=>s.id===lockedStudentId);if(selected)renderStudentRoom();else{currentRole="landing";lockedStudentId=null;switchView("view-landing");renderLandingRoster();}}else if(currentRole==="teacher")renderTeacherAdmin();}
+function mergeCloudState(data){if(!data||!Array.isArray(data.students))return;const localById=new Map((appState.students||[]).map(s=>[s.id,s]));const localPetFields=["petCreated","petId","conceptZH","conceptEN","adjZH","adjEN","hunger","cleanliness","happiness","habitat","fulfilledCount","spentScore","spendLogs","legacySpendNeedsReview","migrationVersion"];const students=data.students.map(remote=>{const merged={...remote},local=localById.get(remote.id);if(local)localPetFields.forEach(key=>{if(Object.prototype.hasOwnProperty.call(local,key))merged[key]=local[key];});return merged;});appState={students,logs:Array.isArray(data.logs)?data.logs:[]};saveLocalStateOnly();if(currentRole==="landing")renderLandingRoster();else if(currentRole==="student"){const selected=appState.students.some(s=>s.id===lockedStudentId);if(selected)renderStudentRoom();else{currentRole="landing";lockedStudentId=null;switchView("view-landing");renderLandingRoster();}}else if(currentRole==="teacher")renderTeacherAdmin();}
 function listenCloudState(){if(!firestoreDb)return;if(classroomUnsubscribe)classroomUnsubscribe();classroomUnsubscribe=classroomRef().onSnapshot(snapshot=>{if(!snapshot.exists){setSyncStatus("等待老師首次初始化",false);return;}mergeCloudState(snapshot.data());setSyncStatus("雲端同步正常",true);},error=>{console.error("Firestore listener failed",error);setSyncStatus("雲端讀取錯誤",false);});}
-async function bootApplication(){loadLocalData();const saved=sessionStorage.getItem(SESSION_LOCK_KEY)||localStorage.getItem(SESSION_LOCK_KEY);if(initializeFirebaseServices()){try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);const existingUser=await new Promise(resolve=>{const off=firebaseAuth.onAuthStateChanged(user=>{off();resolve(user);});});if(!existingUser)await firebaseAuth.signInAnonymously();listenCloudState();if(isVerifiedTeacher(firebaseAuth.currentUser)){const ref=classroomRef(),snapshot=await ref.get();if(!snapshot.exists)await ref.set({students:appState.students,logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});else mergeCloudState(snapshot.data());currentRole="teacher";document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");switchView("view-teacher-admin");renderTeacherAdmin();setSyncStatus("老師已登入・雲端同步中",true);return;}setSyncStatus("雲端已連接・學生唯讀",true);}catch(e){console.error("Cloud startup failed",e);setSyncStatus("本機展示模式（雲端未連線）",false);}}if(saved&&appState.students.some(s=>s.id===saved))enterLockedStudentMode(saved,true);else renderLandingRoster();}
+async function bootApplication(){loadLocalData();const saved=sessionStorage.getItem(SESSION_LOCK_KEY)||localStorage.getItem(SESSION_LOCK_KEY);if(initializeFirebaseServices()){try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);const existingUser=await new Promise(resolve=>{const off=firebaseAuth.onAuthStateChanged(user=>{off();resolve(user);});});if(!existingUser)await firebaseAuth.signInAnonymously();listenCloudState();if(isVerifiedTeacher(firebaseAuth.currentUser)){const ref=classroomRef(),snapshot=await ref.get();if(!snapshot.exists)await ref.set({students:sparkPublicRoster(appState.students),logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});else mergeCloudState(snapshot.data());currentRole="teacher";document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");switchView("view-teacher-admin");renderTeacherAdmin();setSyncStatus("老師已登入・雲端同步中",true);return;}setSyncStatus("雲端已連接・學生唯讀",true);}catch(e){console.error("Cloud startup failed",e);setSyncStatus("本機展示模式（雲端未連線）",false);}}if(saved&&appState.students.some(s=>s.id===saved))enterLockedStudentMode(saved,true);else renderLandingRoster();}
 function switchView(id){["view-landing","view-student-wizard","view-student-room","view-teacher-admin"].forEach(x=>document.getElementById(x).classList.add("hidden"));document.getElementById(id).classList.remove("hidden");}
 function getLockedStudent(){return appState.students.find(s=>s.id===lockedStudentId);}
-function renderLandingRoster(){const grid=document.getElementById("landing-roster-grid");grid.innerHTML=appState.students.map(stu=>{const pet=PET_SPECIES.find(p=>p.id===stu.petId);return `
-<button onclick="enterLockedStudentMode('${stu.id}',false)" class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-200 text-left shadow-sm">
-<div class="flex items-center gap-3"><div class="w-11 h-11 rounded-xl bg-white border p-1 flex items-center justify-center text-3xl">${pet?pet.emoji:"🥚"}</div><div><p class="text-sm font-black">${escapeHTML(stu.name)}</p><p class="text-[11px] text-slate-500">${stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物 Not Adopted Yet"}</p></div></div><span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black">${getAvailableScore(stu)} 可用分</span></button>`;}).join("")||'<p class="text-xs text-slate-400">目前沒有學生，請新增帳號。</p>';}
+function renderLandingRoster(){
+ // The public landing page never exposes the class roster.
+ const grid=document.getElementById("landing-roster-grid");
+ if(grid)grid.classList.remove("grid","grid-cols-1","sm:grid-cols-2","gap-3","max-h-72","overflow-y-auto","pr-1");
+}
+async function enterStudentWithCode(){
+ if(!firestoreDb||!firebaseAuth||!firebaseAuth.currentUser?.isAnonymous){
+  showToast("目前未能連接學生登入服務，請重新整理頁面。","Student sign-in service is unavailable.","⚠️");return;
+ }
+ const input=document.getElementById("student-activation-code");
+ const code=String(input?.value||"").toLowerCase().replace(/\s|-/g,"");
+ if(!/^[0-9a-f]{32}$/.test(code)){
+  showToast("請輸入老師提供的完整 32 位專屬登入碼。","Enter the full 32-character code from your teacher.","⚠️");return;
+ }
+ try{
+  setSyncStatus("正在驗證專屬登入碼…",false);
+  const inviteId=await sparkHashStudentCode(code);
+  const inviteSnap=await firestoreDb.collection("studentInvites").doc(inviteId).get();
+  if(!inviteSnap.exists)throw new Error("登入碼無效、已使用或已被老師撤銷。");
+  const studentId=inviteSnap.data().studentId;
+  if(typeof studentId!=="string"||!studentId)throw new Error("登入碼資料無效，請聯絡老師。");
+  await sparkBindStudent(studentId,inviteId);
+  const classSnap=await classroomRef().get();
+  if(!classSnap.exists)throw new Error("尚未建立班級資料，請聯絡老師。");
+  mergeCloudState(classSnap.data());
+  if(!appState.students.some(x=>x.id===studentId))throw new Error("找不到你的學生資料，請聯絡老師。");
+  if(input)input.value="";
+  listenCloudState();
+  await enterLockedStudentMode(studentId,true);
+  showToast("登入成功！已連接你的學生帳戶。","Student account connected.","🔒");
+ }catch(e){
+  console.error("Student code sign-in failed",e);
+  showToast(e.message||"登入碼驗證失敗，請向老師確認。","Could not validate student code.","⚠️");
+  setSyncStatus("尚未登入學生帳戶",false);
+ }
+}
+
 function registerAndLoginStudent(){showToast("請老師先在後台新增你的名字！","Ask your teacher to add you to the roster first.","👩‍🏫");}
 function enterLockedStudentMode(id,silent=false){const stu=appState.students.find(s=>s.id===id);if(!stu)return;currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);document.getElementById("nav-student-locked").classList.remove("hidden");document.getElementById("nav-student-locked").classList.add("flex");document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");updateTopNavForStudent(stu);if(!silent)showToast("已鎖定學生帳號："+stu.name,"Locked to student account","🔒");if(!stu.petCreated)openPetWizard(false);else{switchView("view-student-room");renderStudentRoom();}}
 function updateTopNavForStudent(stu){document.getElementById("nav-student-label").textContent="🔒 學生："+stu.name;document.getElementById("nav-student-score").textContent=getAvailableScore(stu)+" 可用分";}
@@ -112,7 +146,7 @@ function recordStudentSpend(stu,amount,reason){stu.spentScore=(Number(stu.spentS
 async function logoutRole(){const wasTeacher=currentRole==="teacher";currentRole="landing";lockedStudentId=null;sessionStorage.removeItem(SESSION_LOCK_KEY);localStorage.removeItem(SESSION_LOCK_KEY);document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");if(wasTeacher&&firebaseAuth&&isVerifiedTeacher(firebaseAuth.currentUser)){try{await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();}catch(e){console.warn("Could not return to anonymous session",e);}}switchView("view-landing");renderLandingRoster();showToast("已登出並解除帳號鎖定","Logged out","👋");}
 function openTeacherPasscodeModal(){const m=document.getElementById("teacher-modal");document.getElementById("teacher-email-input").value=TEACHER_EMAIL;document.getElementById("teacher-password-input").value="";const error=document.getElementById("teacher-passcode-error");error.textContent="";error.classList.add("hidden");m.classList.remove("hidden");m.classList.add("flex");document.getElementById("teacher-password-input").focus();}
 function closeTeacherPasscodeModal(){const m=document.getElementById("teacher-modal");m.classList.add("hidden");m.classList.remove("flex");}
-async function verifyTeacherPasscode(){const email=document.getElementById("teacher-email-input").value.trim().toLowerCase(),password=document.getElementById("teacher-password-input").value,error=document.getElementById("teacher-passcode-error");error.classList.add("hidden");if(email!==TEACHER_EMAIL){error.textContent="這不是已授權的老師帳號。";error.classList.remove("hidden");return;}if(!firebaseAuth){error.textContent="目前無法連接 Firebase，請稍後重試。";error.classList.remove("hidden");return;}try{const credential=await firebaseAuth.signInWithEmailAndPassword(email,password);if(!credential.user.emailVerified){try{await credential.user.sendEmailVerification();}catch(sendError){console.warn("Verification email could not be sent",sendError);}await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="請先到老師信箱完成 Email 驗證，再重新登入。驗證信已嘗試寄出。";error.classList.remove("hidden");return;}if(!isVerifiedTeacher(credential.user)){await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="此帳號未獲老師管理權限。";error.classList.remove("hidden");return;}const ref=classroomRef(),snapshot=await ref.get();if(snapshot.exists){mergeCloudState(snapshot.data());}else{await ref.set({students:appState.students,logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});}closeTeacherPasscodeModal();currentRole="teacher";lockedStudentId=null;document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");switchView("view-teacher-admin");renderTeacherAdmin();listenCloudState();setSyncStatus("老師已登入・雲端同步中",true);showToast("老師登入成功！歡迎回來。","Teacher login successful","👩‍🏫");}catch(e){console.error("Teacher login failed",e);error.textContent="登入失敗，請確認 Email 和密碼是否正確。";error.classList.remove("hidden");}}
+async function verifyTeacherPasscode(){const email=document.getElementById("teacher-email-input").value.trim().toLowerCase(),password=document.getElementById("teacher-password-input").value,error=document.getElementById("teacher-passcode-error");error.classList.add("hidden");if(email!==TEACHER_EMAIL){error.textContent="這不是已授權的老師帳號。";error.classList.remove("hidden");return;}if(!firebaseAuth){error.textContent="目前無法連接 Firebase，請稍後重試。";error.classList.remove("hidden");return;}try{let previousBoundDevice=null;const previousAuthUser=firebaseAuth.currentUser;if(previousAuthUser&&previousAuthUser.isAnonymous){try{const previousDeviceSnap=await firestoreDb.collection("devices").doc(previousAuthUser.uid).get();if(previousDeviceSnap.exists)previousBoundDevice={uid:previousAuthUser.uid,studentId:previousDeviceSnap.data().studentId};}catch(deviceLookupError){console.warn("Could not inspect current device binding before teacher login",deviceLookupError);}}const credential=await firebaseAuth.signInWithEmailAndPassword(email,password);if(!credential.user.emailVerified){try{await credential.user.sendEmailVerification();}catch(sendError){console.warn("Verification email could not be sent",sendError);}await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="請先到老師信箱完成 Email 驗證，再重新登入。驗證信已嘗試寄出。";error.classList.remove("hidden");return;}if(!isVerifiedTeacher(credential.user)){await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="此帳號未獲老師管理權限。";error.classList.remove("hidden");return;}let releasedPriorStudentBinding=false;if(previousBoundDevice){try{releasedPriorStudentBinding=await sparkReleasePreviousBinding(previousBoundDevice);}catch(bindingError){console.error("Could not release prior student device binding",bindingError);showToast("原學生裝置綁定未能自動解除，請在老師後台手動解除","Previous device binding needs manual release","⚠️");}}const ref=classroomRef(),snapshot=await ref.get();if(snapshot.exists){mergeCloudState(snapshot.data());}else{await ref.set({students:sparkPublicRoster(appState.students),logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});}await sparkEnsureAccounts();sparkListenTeacherAccounts();closeTeacherPasscodeModal();currentRole="teacher";lockedStudentId=null;document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");switchView("view-teacher-admin");renderTeacherAdmin();listenCloudState();setSyncStatus("老師已登入・雲端同步中",true);showToast(releasedPriorStudentBinding?"老師登入成功；原學生裝置綁定已解除，離開後台後可重新選名綁定。":"老師登入成功！歡迎回來。",releasedPriorStudentBinding?"Teacher login successful; the previous student device was released.":"Teacher login successful","👩‍🏫");}catch(e){console.error("Teacher login failed",e);error.textContent="登入失敗，請確認 Email 和密碼是否正確。";error.classList.remove("hidden");}}
 function openPetWizardForEdit(){openPetWizard(true);}
 function openPetWizard(editing){const stu=getLockedStudent();if(!stu)return;wizardState={petId:stu.petId||"fox",conceptZH:stu.conceptZH||"機會成本",conceptEN:stu.conceptEN||"Opportunity Cost",adjZH:stu.adjZH||"精明的",adjEN:stu.adjEN||"Savvy",isEditingExisting:editing};["custom-concept-zh","custom-concept-en","custom-adj-zh","custom-adj-en"].forEach(id=>document.getElementById(id).value="");document.getElementById("btn-cancel-wizard").classList.toggle("hidden",!editing);switchView("view-student-wizard");renderWizardPets();renderWizardChips();updateWizardNamePreview();}
 function cancelWizardToRoom(){switchView("view-student-room");renderStudentRoom();}
@@ -133,11 +167,498 @@ function fulfillPetRequest(){const stu=getLockedStudent();if(!stu)return;const w
 function adminAddStudent(){const input=document.getElementById("admin-new-student-name"),name=input.value.trim();if(!name){showToast("請輸入學生姓名！","Please enter student name!","⚠️");return;}appState.students.push({id:"stu_"+Date.now(),name,petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,hunger:50,cleanliness:50,happiness:60,habitat:"meadow",wishId:"w5",fulfilledCount:0});input.value="";persistState();renderTeacherAdmin();showToast("已新增學生："+name,"Student added","✅");}
 function adminAdjustScore(id,delta,reason){const stu=appState.students.find(s=>s.id===id);if(!stu)return;const amount=parseInt(delta,10);if(!Number.isInteger(amount)||amount===0){showToast("請輸入有效的非零整數分數！","Enter a valid non-zero integer!","⚠️");return;}stu.score=Math.max(0,(stu.score||0)+amount);const now=new Date(),time=now.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});appState.logs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:amount,reason:reason||"老師評分 Teacher Score",time});if(appState.logs.length>50)appState.logs.pop();persistState();renderTeacherAdmin();showToast(stu.name+" "+(amount>0?"+":"")+amount+" 分","Score updated",amount>0?"🌟":"📉");}
 function adminApplyCustomScore(id){const pts=parseInt(document.getElementById("custom-pts-"+id).value,10),reason=document.getElementById("custom-reason-"+id).value.trim();adminAdjustScore(id,pts,reason);}
-function adminTriggerStudentWish(id){const stu=appState.students.find(s=>s.id===id);if(!stu)return;const pool=WISH_POOL.filter(w=>w.id!==stu.wishId);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;persistState();renderTeacherAdmin();showToast("已為 "+stu.name+" 發送新心願","Wish sent","💌");}
-function triggerClassWideRequest(){appState.students.forEach(stu=>{const pool=WISH_POOL.filter(w=>w.id!==stu.wishId);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;});persistState();renderTeacherAdmin();showToast("已向全班發送新心願！","Class wishes broadcast","📢");}
+function adminTriggerStudentWish(id){if(classroomMaintenancePending){showToast("班級清理尚未完成，請先完成清理","Class cleanup is pending","⚠️");return;}const stu=appState.students.find(s=>s.id===id);if(!stu)return;const pool=WISH_POOL.filter(w=>w.id!==stu.wishId);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;persistState();renderTeacherAdmin();showToast("已為 "+stu.name+" 發送新心願","Wish sent","💌");}
+function triggerClassWideRequest(){if(classroomMaintenancePending){showToast("班級清理尚未完成，請先完成清理","Class cleanup is pending","⚠️");return;}appState.students.forEach(stu=>{const pool=WISH_POOL.filter(w=>w.id!==stu.wishId);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;});persistState();renderTeacherAdmin();showToast("已向全班發送新心願！","Class wishes broadcast","📢");}
 async function adminClearAllRecords(){if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth?.currentUser)){showToast("只有已驗證的老師可以清空資料","Teacher access required","🔒");return;}const confirmed=window.confirm("確定要清空全班所有資料嗎？\n\n這會永久刪除：學生名單、所有積分、寵物資料、寵物狀態及評分紀錄。\n\n此動作無法復原。");if(!confirmed)return;const previous=appState;appState={students:[],logs:[]};saveLocalStateOnly();try{await classroomRef().set({students:[],logs:[],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});renderTeacherAdmin();renderLandingRoster();showToast("全班學生、寵物、積分及紀錄已清空","All classroom records cleared","🗑️");}catch(e){console.error("Clear all records failed",e);appState=previous;saveLocalStateOnly();renderTeacherAdmin();showToast("清空失敗，原有資料已恢復","Clear failed; previous data restored","⚠️");}}
 function renderTeacherAdmin(){document.getElementById("admin-total-students")?.textContent;document.getElementById("admin-students-list").innerHTML=appState.students.map(stu=>{const pet=PET_SPECIES.find(p=>p.id===stu.petId),wish=WISH_POOL.find(w=>w.id===stu.wishId)||WISH_POOL[0];return `
-<div class="bg-white rounded-3xl shadow-md p-5 border space-y-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div class="flex items-center gap-3"><div class="w-14 h-14 rounded-2xl bg-amber-50 border p-1 flex items-center justify-center text-4xl">${pet?pet.emoji:"🥚"}</div><div><h4 class="text-base font-black">${escapeHTML(stu.name)}</h4><p class="text-xs font-bold text-indigo-700">${stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物"}</p><p class="text-[11px] text-slate-500">💌 ${wish.zh} (需 ${wish.req} 分)</p></div></div><div class="flex items-center gap-2"><button onclick="adminTriggerStudentWish('${stu.id}')" class="px-3 py-2 rounded-xl bg-purple-50 text-purple-700 border text-xs font-bold">💌 換心願</button><div class="px-4 py-2 rounded-2xl bg-amber-400 text-amber-950 font-black">累計獲得 ${stu.score} 分</div></div></div><div class="flex flex-wrap gap-1.5 pt-2 border-t"><span class="text-[11px] font-extrabold text-slate-500">⚡ 快捷評分:</span><button onclick="adminAdjustScore('${stu.id}',2,'積極回答 Active Answer')" class="px-2.5 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold">+2 積極回答</button><button onclick="adminAdjustScore('${stu.id}',5,'經濟學神分析 Great Econ Insight')" class="px-2.5 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold">+5 神分析</button><button onclick="adminAdjustScore('${stu.id}',10,'小組優勝 Team Winner')" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">+10 小組優勝</button><button onclick="adminAdjustScore('${stu.id}',-2,'分心聊天 Distracted')" class="px-2.5 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold">-2 分心聊天</button><button onclick="adminAdjustScore('${stu.id}',-5,'未交功課 Missing Work')" class="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold">-5 未交功課</button></div><div class="bg-slate-50 rounded-2xl p-3 border flex flex-col sm:flex-row gap-2"><input id="custom-pts-${stu.id}" type="number" value="3" class="w-full sm:w-24 px-3 py-1.5 rounded-xl border text-xs font-black text-center"><input id="custom-reason-${stu.id}" type="text" placeholder="輸入加減分理由" class="flex-1 px-3 py-1.5 rounded-xl border text-xs"><button onclick="adminApplyCustomScore('${stu.id}')" class="px-4 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-black">確認調整</button></div></div>`;}).join("");document.getElementById("admin-activity-log").innerHTML=appState.logs.length?appState.logs.map(l=>`<div class="p-3 rounded-2xl bg-slate-50 border flex items-center justify-between gap-2"><div class="min-w-0"><p class="font-black">${escapeHTML(l.studentName)}</p><p class="text-[11px] text-slate-600">${escapeHTML(l.reason)}</p><p class="text-[10px] text-slate-400">${l.time}</p></div><span class="px-2.5 py-1 rounded-xl font-black ${l.delta>=0?"bg-emerald-100 text-emerald-700":"bg-rose-100 text-rose-700"}">${l.delta>=0?"+":""}${l.delta} 分</span></div>`).join(""):'<p class="text-slate-400 text-center py-6">尚無積分異動紀錄</p>';}
+<div class="bg-white rounded-3xl shadow-md p-5 border space-y-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div class="flex items-center gap-3"><div class="w-14 h-14 rounded-2xl bg-amber-50 border p-1 flex items-center justify-center text-4xl">${pet?pet.emoji:"🥚"}</div><div><h4 class="text-base font-black">${escapeHTML(stu.name)}</h4><p class="text-xs font-bold text-indigo-700">${stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物"}</p><p class="text-[11px] text-slate-500">💌 ${wish.zh} (需 ${wish.req} 分)</p></div></div><div class="flex items-center gap-2"><button onclick="adminTriggerStudentWish('${stu.id}')" class="px-3 py-2 rounded-xl bg-purple-50 text-purple-700 border text-xs font-bold">💌 換心願</button><div class="px-4 py-2 rounded-2xl bg-amber-400 text-amber-950 font-black">累計獲得 ${stu.score} 分</div><div class="text-[11px] font-bold text-slate-600">已消費 ${stu.spentScore||0} · 可用 ${getAvailableScore(stu)}</div>${stu.legacySpendNeedsReview ? '<button onclick="sparkReconcileLegacySpend(' + "'" + stu.id + "'" + ')" class="text-[10px] font-bold text-amber-800 underline">⚠️ 核對舊消費紀錄</button>' : ''}<button onclick="sparkIssueStudentCode('${stu.id}')" class="px-3 py-2 rounded-xl bg-indigo-50 text-indigo-700 border text-xs font-bold">發放登入碼</button><button onclick="sparkReleaseDevice('${stu.id}')" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 border text-xs font-bold">解除裝置</button></div></div><div class="flex flex-wrap gap-1.5 pt-2 border-t"><span class="text-[11px] font-extrabold text-slate-500">⚡ 快捷評分:</span><button onclick="adminAdjustScore('${stu.id}',2,'積極回答 Active Answer')" class="px-2.5 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold">+2 積極回答</button><button onclick="adminAdjustScore('${stu.id}',5,'經濟學神分析 Great Econ Insight')" class="px-2.5 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold">+5 神分析</button><button onclick="adminAdjustScore('${stu.id}',10,'小組優勝 Team Winner')" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">+10 小組優勝</button><button onclick="adminAdjustScore('${stu.id}',-2,'分心聊天 Distracted')" class="px-2.5 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold">-2 分心聊天</button><button onclick="adminAdjustScore('${stu.id}',-5,'未交功課 Missing Work')" class="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold">-5 未交功課</button></div><div class="bg-slate-50 rounded-2xl p-3 border flex flex-col sm:flex-row gap-2"><input id="custom-pts-${stu.id}" type="number" value="3" class="w-full sm:w-24 px-3 py-1.5 rounded-xl border text-xs font-black text-center"><input id="custom-reason-${stu.id}" type="text" placeholder="輸入加減分理由" class="flex-1 px-3 py-1.5 rounded-xl border text-xs"><button onclick="adminApplyCustomScore('${stu.id}')" class="px-4 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-black">確認調整</button></div></div>`;}).join("");document.getElementById("admin-activity-log").innerHTML=appState.logs.length?appState.logs.map(l=>`<div class="p-3 rounded-2xl bg-slate-50 border flex items-center justify-between gap-2"><div class="min-w-0"><p class="font-black">${escapeHTML(l.studentName)}</p><p class="text-[11px] text-slate-600">${escapeHTML(l.reason)}</p><p class="text-[10px] text-slate-400">${l.time}</p></div><span class="px-2.5 py-1 rounded-xl font-black ${l.delta>=0?"bg-emerald-100 text-emerald-700":"bg-rose-100 text-rose-700"}">${l.delta>=0?"+":""}${l.delta} 分</span></div>`).join(""):'<p class="text-slate-400 text-center py-6">尚無積分異動紀錄</p>';}
+
+
+let sparkAccountUnsubscribe=null;
+let classroomMaintenancePending=false;
+const legacySpendSnapshots=new Map();
+function sparkAccountRef(id){return firestoreDb.collection("studentAccounts").doc(id);}
+function sparkDeviceRef(uid){return firestoreDb.collection("devices").doc(uid);}
+function sparkTxRef(studentId,id){return sparkAccountRef(studentId).collection("transactions").doc(id);}
+function sparkGenerateStudentCode(){
+ if(!window.crypto||!window.crypto.getRandomValues)throw new Error("這個瀏覽器不支援安全登入碼產生，請更新瀏覽器。");
+ const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
+ return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function sparkHashStudentCode(code){
+ if(!window.crypto||!window.crypto.subtle||!window.TextEncoder)throw new Error("瀏覽器無法安全驗證登入碼，請使用最新版本的瀏覽器。");
+ const digest=await window.crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(code)));
+ return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function sparkIssueStudentCode(studentId){
+ if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ try{
+  if(classroomMaintenancePending)throw new Error("班級清理尚未完成，暫時不能發放登入碼。");
+  const account=sparkAccountRef(studentId),accountSnap=await account.get();
+  if(!accountSnap.exists)throw new Error("找不到學生雲端帳戶。");
+  if(accountSnap.data().boundUid)throw new Error("這位學生已有綁定裝置。請先解除裝置，再發放新登入碼。");
+  const student=appState.students.find(x=>x.id===studentId);
+  if(!student)throw new Error("找不到學生名單資料。");
+  const code=sparkGenerateStudentCode(),inviteId=await sparkHashStudentCode(code);
+  const oldInvites=await firestoreDb.collection("studentInvites").where("studentId","==",studentId).get();
+  const batch=firestoreDb.batch();
+  oldInvites.forEach(doc=>batch.delete(doc.ref));
+  batch.set(firestoreDb.collection("studentInvites").doc(inviteId),{
+   studentId:studentId,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await batch.commit();
+  window.alert("學生："+student.name+"\n\n專屬一次性登入碼：\n"+code+"\n\n請私下把這組登入碼交給該學生。登入碼只顯示這一次，不能公開分享。");
+  return code;
+ }catch(e){
+  console.error("Could not issue student access code",e);
+  showToast(e.message||"發放登入碼失敗，請重試","Could not issue student access code","⚠️");
+  return null;
+ }
+}
+
+async function sparkEnsureAccounts(){
+ if(!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ const classroomSnap=await classroomRef().get();
+ if(classroomSnap.exists&&classroomSnap.data().maintenanceClearPending){classroomMaintenancePending=true;return;}
+ classroomMaintenancePending=false;
+ for(const stu of appState.students){
+  const ref=sparkAccountRef(stu.id),snap=await ref.get();
+  if(!snap.exists){
+   const legacy=legacySpendSnapshots.get(stu.id)||(
+    Object.prototype.hasOwnProperty.call(stu,"spentScore")||Array.isArray(stu.spendLogs)
+     ?{spentScore:Number(stu.spentScore)||0,spendLogs:Array.isArray(stu.spendLogs)?stu.spendLogs:[]}
+     :null
+   );
+   const earned=Math.max(0,Math.floor(Number(stu.score)||0));
+   const logs=legacy&&Array.isArray(legacy.spendLogs)?legacy.spendLogs:[];
+   const loggedTotal=logs.reduce((sum,x)=>sum+Math.max(0,Math.floor(Math.abs(Number(x&&x.delta)||0))),0);
+   const requested=legacy?Math.max(Math.floor(Number(legacy.spentScore)||0),loggedTotal):0;
+   const spent=Math.min(earned,requested);
+   const needsReview=(!legacy&&earned>0)||requested>earned;
+   // Account and its import ledger are committed atomically so a retry cannot
+   // leave a migrated balance without its corresponding audit records.
+   let remaining=spent,seq=0;
+   const migrationBatch=firestoreDb.batch();
+   migrationBatch.set(ref,{
+    studentId:stu.id,earnedScore:earned,spentScore:spent,boundUid:null,lastTransactionId:null,
+    legacySpendNeedsReview:needsReview,
+    legacySpendOverflow:Math.max(0,requested-spent),
+    legacySpendSource:legacy?"teacher-browser-local-data":"not-found-on-teacher-device",
+    migrationVersion:1,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+   });
+   for(const entry of logs.slice(0,100)){
+    if(remaining<=0)break;
+    const amount=Math.min(remaining,Math.max(0,Math.floor(Math.abs(Number(entry&&entry.delta)||0))));
+    if(!amount)continue;
+    const id="legacy_"+String(seq++).padStart(4,"0");
+    const rawTime=Number(entry&&entry.timestamp);
+    const createdAt=Number.isFinite(rawTime)&&rawTime>0
+      ?firebase.firestore.Timestamp.fromMillis(rawTime)
+      :firebase.firestore.Timestamp.now();
+    migrationBatch.set(ref.collection("transactions").doc(id),{
+     studentId:stu.id,uid:"legacy-import",action:"legacy_import",amount,
+     reason:("舊版紀錄匯入："+String(entry&&entry.reason||"舊消費紀錄")).slice(0,120),
+     createdAt
+    });
+    remaining-=amount;
+   }
+   if(remaining>0){
+    migrationBatch.set(ref.collection("transactions").doc("legacy_carryover"),{
+     studentId:stu.id,uid:"legacy-import",action:"legacy_import",amount:remaining,
+     reason:"舊版累計消費餘額（沒有足夠逐筆紀錄）",createdAt:firebase.firestore.Timestamp.now()
+    });
+   }
+   await migrationBatch.commit();
+   stu.spentScore=spent;
+   stu.legacySpendNeedsReview=needsReview;
+   stu.migrationVersion=1;
+   legacySpendSnapshots.delete(stu.id);
+  }else{
+   const d=snap.data();stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;
+   stu.legacySpendNeedsReview=!!d.legacySpendNeedsReview;
+   if(!d.migrationVersion){
+    await ref.update({migrationVersion:1,legacySpendNeedsReview:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    stu.legacySpendNeedsReview=true;
+   }
+   stu.migrationVersion=1;
+   legacySpendSnapshots.delete(stu.id);
+  }
+ }
+ await classroomRef().set({students:sparkPublicRoster(appState.students),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+ saveLocalStateOnly();
+}
+async function sparkBindStudent(studentId,inviteId=null){
+ const user=firebaseAuth&&firebaseAuth.currentUser;
+ if(!user||!user.isAnonymous)throw new Error("學生登入狀態無效，請重新整理");
+ const uid=user.uid,device=sparkDeviceRef(uid),account=sparkAccountRef(studentId);
+ const deviceSnap=await device.get();
+ if(deviceSnap.exists){
+  if(deviceSnap.data().studentId!==studentId)throw new Error("這部裝置已綁定其他帳戶，請聯絡老師");
+  const accountSnap=await account.get();
+  if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("裝置綁定資料不一致，請聯絡老師");
+  if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("學生積分帳戶尚未完成初始化，請聯絡老師");
+  return accountSnap.data();
+ }
+ if(!inviteId)throw new Error("首次登入必須使用老師發放的專屬登入碼。");
+ const inviteRef=firestoreDb.collection("studentInvites").doc(inviteId);
+ const inviteSnap=await inviteRef.get();
+ if(!inviteSnap.exists||inviteSnap.data().studentId!==studentId)throw new Error("登入碼無效或已使用，請向老師確認。");
+ if(!window.confirm("確定使用老師發給你的專屬登入碼，將這部裝置綁定到你的學生帳戶嗎？綁定後不能自行切換學生；如需更換裝置，請聯絡老師。"))throw new Error("你已取消學生裝置綁定");
+ const batch=firestoreDb.batch();
+ batch.set(device,{studentId:studentId,inviteId:inviteId,boundAt:firebase.firestore.FieldValue.serverTimestamp()});
+ batch.update(account,{boundUid:uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ batch.delete(inviteRef);
+ await batch.commit();
+ const accountSnap=await account.get();
+ if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("學生帳戶綁定未能確認，請聯絡老師");
+ if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("學生積分帳戶尚未完成初始化，請聯絡老師");
+ return accountSnap.data();
+}
+async function sparkSpend(studentId,action,amount,reason){
+ const uid=firebaseAuth.currentUser.uid,account=sparkAccountRef(studentId);
+ const id="tx_"+Date.now()+"_"+Math.random().toString(36).slice(2,10),ledger=sparkTxRef(studentId,id);
+ await firestoreDb.runTransaction(async tx=>{
+  const snap=await tx.get(account);
+  if(!snap.exists)throw new Error("找不到雲端積分帳戶");
+  const d=snap.data(),earned=Number(d.earnedScore)||0,spent=Number(d.spentScore)||0;
+  if(d.boundUid!==uid)throw new Error("裝置綁定已失效，請聯絡老師");
+  if(earned-spent<amount)throw new Error("可用積分不足，請重新整理後再試");
+  tx.update(account,{spentScore:spent+amount,lastTransactionId:id,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  tx.set(ledger,{studentId:studentId,uid:uid,action:action,amount:amount,reason:String(reason||"寵物互動消耗").slice(0,120),createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+ });
+ const stu=appState.students.find(x=>x.id===studentId);
+ if(stu){stu.spentScore=(Number(stu.spentScore)||0)+amount;stu.spendLogs=Array.isArray(stu.spendLogs)?stu.spendLogs:[];stu.spendLogs.unshift({id:id,delta:-amount,reason:reason,time:new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})});saveLocalStateOnly();}
+}
+async function sparkLoadTransactions(studentId){
+ const snap=await sparkAccountRef(studentId).collection("transactions").orderBy("createdAt","desc").limit(100).get();
+ const stu=appState.students.find(x=>x.id===studentId);
+ if(stu)stu.spendLogs=snap.docs.map(d=>{const data=d.data(),amount=Number(data.amount||0);return{id:d.id,delta:data.action==="legacy_refund_adjustment"?amount:-amount,reason:data.reason||"寵物互動消耗",time:data.createdAt&&data.createdAt.toDate?data.createdAt.toDate().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"}):""};});
+}
+function sparkListenAccount(studentId){
+ if(sparkAccountUnsubscribe)sparkAccountUnsubscribe();
+ sparkAccountUnsubscribe=sparkAccountRef(studentId).onSnapshot(snap=>{
+  if(!snap.exists)return;
+  const d=snap.data(),stu=appState.students.find(x=>x.id===studentId);
+  if(stu){stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;saveLocalStateOnly();if(currentRole==="student"&&lockedStudentId===studentId)renderStudentRoom();}
+ },e=>{console.error(e);setSyncStatus("積分同步失敗",false);});
+}
+async function sparkReconcileLegacySpend(studentId){
+ if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ if(classroomMaintenancePending){showToast("班級清理尚未完成，暫停核對","Class cleanup is pending","⚠️");return;}
+ const stu=appState.students.find(x=>x.id===studentId);if(!stu)return;
+ const raw=window.prompt("請輸入已核對的累計消費分數（0 至 "+(Number(stu.score)||0)+"）",String(Number(stu.spentScore)||0));
+ if(raw===null)return;
+ const value=Number(String(raw).trim()),earned=Number(stu.score)||0;
+ if(!Number.isInteger(value)||value<0||value>earned){showToast("請輸入 0 至累計獲得分數之間的整數","Enter a whole number between zero and earned points","⚠️");return;}
+ if(!window.confirm("確認將 "+stu.name+" 的累計消費設定為 "+value+" 分？這會記錄一筆老師核對紀錄。"))return;
+ const ref=sparkAccountRef(studentId),txId="legacy_review_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
+ try{
+  await firestoreDb.runTransaction(async tx=>{
+   const snap=await tx.get(ref);if(!snap.exists)throw new Error("找不到學生雲端積分帳戶");
+   const data=snap.data(),oldSpent=Number(data.spentScore)||0,currentEarned=Number(data.earnedScore)||0;
+   if(value>currentEarned)throw new Error("核對消費不能高於累計獲得分數");
+   tx.update(ref,{spentScore:value,legacySpendNeedsReview:false,legacySpendOverflow:0,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+   if(value!==oldSpent){
+    tx.set(sparkTxRef(studentId,txId),{
+     studentId,uid:"teacher-reconcile",
+     action:value>oldSpent?"legacy_spend_adjustment":"legacy_refund_adjustment",
+     amount:Math.abs(value-oldSpent),
+     reason:"老師核對舊版累計消費："+oldSpent+" → "+value,
+     createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+   }
+  });
+  stu.spentScore=value;stu.legacySpendNeedsReview=false;
+  await sparkLoadTransactions(studentId);
+  await classroomRef().set({
+   students:sparkPublicRoster(appState.students),
+   updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true});
+  saveLocalStateOnly();renderTeacherAdmin();renderLandingRoster();
+  showToast("舊消費紀錄已核對並同步","Legacy spend history reconciled","✅");
+ }catch(e){console.error("Legacy spend reconciliation failed",e);showToast(e.message||"核對失敗，請重試","Reconciliation failed","⚠️");}
+}
+async function sparkReleaseDevice(studentId){
+ if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ if(classroomMaintenancePending){showToast("班級清理尚未完成，暫停解除裝置","Class cleanup is pending","⚠️");return;}
+ const account=sparkAccountRef(studentId),snap=await account.get();
+ if(!snap.exists||!snap.data().boundUid){showToast("這位學生目前沒有綁定裝置","No device is currently bound","ℹ️");return;}
+ if(!window.confirm("確定解除這位學生的裝置綁定？舊裝置將無法再登入，學生需使用新裝置重新綁定。"))return;
+ const uid=snap.data().boundUid,batch=firestoreDb.batch();
+ batch.set(firestoreDb.collection("revokedDevices").doc(uid),{studentId:studentId,revokedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ batch.delete(sparkDeviceRef(uid));
+ batch.update(account,{boundUid:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ await batch.commit();showToast("已解除裝置綁定","Device binding released","🔓");renderTeacherAdmin();
+}
+function mergeCloudState(data){
+ if(!data||!Array.isArray(data.students))return;
+ const localById=new Map((appState.students||[]).map(x=>[x.id,x]));
+ const petFields=["petCreated","petId","conceptZH","conceptEN","adjZH","adjEN","hunger","cleanliness","happiness","habitat","fulfilledCount"];
+ const students=data.students.map(remote=>{
+  const merged={...remote},local=localById.get(remote.id);
+  if(local){
+   // Keep the legacy local spend snapshot separately for one-time teacher-led migration.
+   if(!legacySpendSnapshots.has(remote.id)){
+    const sources=[local,remote].filter(x=>x&&(Object.prototype.hasOwnProperty.call(x,"spentScore")||Array.isArray(x.spendLogs)));
+    if(sources.length){
+     const spentScore=Math.max(0,...sources.map(x=>Number(x.spentScore)||0));
+     const logs=sources.flatMap(x=>Array.isArray(x.spendLogs)?x.spendLogs:[]);
+     const uniqueLogs=[...new Map(logs.map((x,i)=>[String(x.id||("legacy_"+i)),x])).values()];
+     legacySpendSnapshots.set(remote.id,{spentScore,spendLogs:uniqueLogs});
+    }
+   }
+   petFields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(local,k))merged[k]=local[k];});
+  } else if(!legacySpendSnapshots.has(remote.id) &&
+     (Object.prototype.hasOwnProperty.call(remote,"spentScore")||Array.isArray(remote.spendLogs))){
+   legacySpendSnapshots.set(remote.id,{spentScore:Math.max(0,Number(remote.spentScore)||0),spendLogs:Array.isArray(remote.spendLogs)?remote.spendLogs:[]});
+  }
+  return merged;
+ });
+ appState={students:students,logs:Array.isArray(data.logs)?data.logs:[]};saveLocalStateOnly();
+ if(currentRole==="landing")renderLandingRoster();
+ else if(currentRole==="student"){if(appState.students.some(x=>x.id===lockedStudentId))renderStudentRoom();else{currentRole="landing";lockedStudentId=null;switchView("view-landing");renderLandingRoster();}}
+ else if(currentRole==="teacher")renderTeacherAdmin();
+}
+async function enterLockedStudentMode(id,silent=false){
+ const stu=appState.students.find(x=>x.id===id);if(!stu)return;
+ if(stu.pointsReady===false||stu.legacySpendNeedsReview===true){
+  showToast("這個學生的舊積分尚待老師核對，暫時不能登入。","Legacy points need teacher reconciliation before login.","⚠️");
+  return;
+ }
+ try{
+  setSyncStatus("正在確認裝置綁定…",false);
+  const account=await sparkBindStudent(id);
+  if(account.migrationVersion!==1||account.legacySpendNeedsReview!==false){
+   showToast("這個學生的舊積分尚待老師核對，請聯絡老師。","Legacy points need teacher reconciliation.","⚠️");
+   return;
+  }
+  stu.score=Number(account.earnedScore)||0;stu.spentScore=Number(account.spentScore)||0;
+  stu.migrationVersion=Number(account.migrationVersion)||0;
+  stu.legacySpendNeedsReview=account.legacySpendNeedsReview===true;
+  await sparkLoadTransactions(id);
+  currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);
+  document.getElementById("nav-student-locked").classList.remove("hidden");document.getElementById("nav-student-locked").classList.add("flex");
+  document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");
+  sparkListenAccount(id);updateTopNavForStudent(stu);
+  if(!silent)showToast("已鎖定學生帳號："+stu.name,"Locked to student account","🔒");
+  if(!stu.petCreated)openPetWizard(false);else{switchView("view-student-room");renderStudentRoom();}
+  setSyncStatus("學生積分已連接雲端",true);
+ }catch(e){console.error("Student binding failed",e);showToast(e.message||"無法綁定學生帳戶，請聯絡老師","Could not bind student account","⚠️");setSyncStatus("學生帳戶未綁定",false);}
+}
+async function interactCare(type){
+ const stu=getLockedStudent();if(!stu)return;
+ const costs={pet:1,feed:5,bathe:10,play:15},cost=costs[type];if(!Number.isInteger(cost))return;
+ if(getAvailableScore(stu)<cost){showToast("可用積分不足！這次互動需要 "+cost+" 分。","Not enough available points.","🔒");return;}
+ const pet=PET_SPECIES.find(p=>p.id===stu.petId)||PET_SPECIES[0],p=PERSONALITIES[pet.personality]||PERSONALITIES["乖巧"];
+ const reason=({pet:"撫摸寵物",feed:"餵食寵物",bathe:"替寵物洗澡",play:"和寵物玩耍"})[type]+"（消耗）";
+ try{
+  await sparkSpend(stu.id,type,cost,reason);
+  if(type==="pet")stu.happiness=Math.min(100,stu.happiness+4);
+  if(type==="feed"){stu.hunger=Math.min(100,stu.hunger+18);stu.happiness=Math.min(100,stu.happiness+6);}
+  if(type==="bathe"){stu.cleanliness=Math.min(100,stu.cleanliness+22);stu.happiness=Math.min(100,stu.happiness+8);}
+  if(type==="play"){stu.happiness=Math.min(100,stu.happiness+20);stu.hunger=Math.max(15,stu.hunger-5);}
+  saveLocalStateOnly();renderStudentRoom(p[type]||p.high);showToast("互動完成，已同步消耗 "+cost+" 分！","Interaction complete; points synced.","✨");
+ }catch(e){showToast(e.message||"消費未能同步，請重試","Spend could not be synced","⚠️");}
+}
+async function fulfillPetRequest(){
+ const stu=getLockedStudent();if(!stu)return;
+ const wish=WISH_POOL.find(w=>w.id===stu.wishId)||WISH_POOL[0];
+ if(getAvailableScore(stu)<wish.req){showToast("可用積分不足！需要 "+wish.req+" 分。","Not enough available points.","🔒");return;}
+ try{
+  await sparkSpend(stu.id,"wish",wish.req,"達成寵物心願（消耗）");
+  stu.fulfilledCount=(stu.fulfilledCount||0)+1;stu.happiness=100;stu.hunger=Math.min(100,stu.hunger+15);stu.cleanliness=Math.min(100,stu.cleanliness+15);
+  const pool=WISH_POOL.filter(w=>w.id!==wish.id);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;
+  saveLocalStateOnly();renderStudentRoom("太棒了！心願達成啦！主人你簡直是經濟學之神！");showToast("心願達成，已同步消耗 "+wish.req+" 分！","Wish fulfilled; points synced.","🏆");
+ }catch(e){showToast(e.message||"消費未能同步，請重試","Spend could not be synced","⚠️");}
+}
+async function adminAddStudent(){
+ if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ if(classroomMaintenancePending){showToast("班級清理尚未完成，請先重新執行清空","Class cleanup is still pending","⚠️");return;}
+ const input=document.getElementById("admin-new-student-name"),name=input.value.trim();
+ if(!name){showToast("請輸入學生姓名！","Please enter student name!","⚠️");return;}
+ const stu={id:"stu_"+Date.now(),name:name,petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,spentScore:0,legacySpendNeedsReview:false,migrationVersion:1,hunger:50,cleanliness:50,happiness:60,habitat:"meadow",wishId:"w5",fulfilledCount:0};
+ try{
+  const code=sparkGenerateStudentCode(),inviteId=await sparkHashStudentCode(code),batch=firestoreDb.batch();
+  batch.set(sparkAccountRef(stu.id),{
+   studentId:stu.id,earnedScore:0,spentScore:0,boundUid:null,lastTransactionId:null,
+   legacySpendNeedsReview:false,legacySpendOverflow:0,legacySpendSource:"new-student",
+   migrationVersion:1,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  batch.set(firestoreDb.collection("studentInvites").doc(inviteId),{
+   studentId:stu.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await batch.commit();
+  appState.students.push(stu);input.value="";
+  await classroomRef().set({students:sparkPublicRoster(appState.students),logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  renderTeacherAdmin();
+  window.alert("已新增學生："+name+"\n\n學生專屬一次性登入碼：\n"+code+"\n\n請私下把這組登入碼交給該學生。登入碼只顯示這一次，不能公開分享。");
+  showToast("已新增學生及專屬登入碼："+name,"Student and private access code created","✅");
+ }catch(e){console.error(e);showToast(e.message||"新增學生或登入碼失敗，請重試","Could not create student or access code","⚠️");}
+}
+async function adminAdjustScore(id,delta,reason){
+ if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ if(classroomMaintenancePending){showToast("班級清理尚未完成，暫停調整積分","Class cleanup is pending","⚠️");return;}
+ const stu=appState.students.find(x=>x.id===id);if(!stu)return;
+ const amount=parseInt(delta,10);if(!Number.isInteger(amount)||amount===0){showToast("請輸入有效的非零整數分數！","Enter a valid non-zero integer!","⚠️");return;}
+ const ref=sparkAccountRef(id),classRef=classroomRef(),time=new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});
+ try{
+  let nextEarned=0,nextStudents=[],nextLogs=[];
+  await firestoreDb.runTransaction(async tx=>{
+   const accountSnap=await tx.get(ref),classSnap=await tx.get(classRef);
+   if(!accountSnap.exists)throw new Error("學生雲端帳戶不存在");
+   const data=accountSnap.data(),spent=Number(data.spentScore)||0,earned=Number(data.earnedScore)||0;
+   nextEarned=Math.max(spent,earned+amount);
+   if(nextEarned===earned)throw new Error("扣分不能令累計獲得積分低於已消費積分");
+   const classData=classSnap.exists?classSnap.data():{};
+   nextStudents=(Array.isArray(classData.students)?classData.students:appState.students).map(x=>x.id===id?{...x,score:nextEarned}:x);
+   nextLogs=Array.isArray(classData.logs)?classData.logs.slice():appState.logs.slice();
+   nextLogs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:nextEarned-earned,reason:reason||"老師評分 Teacher Score",time:time});
+   if(nextLogs.length>50)nextLogs.pop();
+   tx.update(ref,{earnedScore:nextEarned,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+   tx.set(classRef,{students:sparkPublicRoster(nextStudents),logs:nextLogs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  });
+  appState.students=nextStudents;appState.logs=nextLogs;stu.score=nextEarned;saveLocalStateOnly();
+  renderTeacherAdmin();showToast(stu.name+" 分數已同步更新","Student score synced",amount>0?"🌟":"📉");
+ }catch(e){console.error(e);showToast(e.message||"雲端評分失敗","Cloud score update failed","⚠️");}
+}
+async function bootApplication(){
+ loadLocalData();const saved=sessionStorage.getItem(SESSION_LOCK_KEY)||localStorage.getItem(SESSION_LOCK_KEY);
+ if(initializeFirebaseServices()){
+  try{
+   await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+   const existing=await new Promise(resolve=>{const off=firebaseAuth.onAuthStateChanged(user=>{off();resolve(user);});});
+   if(!existing)await firebaseAuth.signInAnonymously();
+   listenCloudState();
+   if(isVerifiedTeacher(firebaseAuth.currentUser)){
+    const ref=classroomRef(),snap=await ref.get();
+    if(!snap.exists)await ref.set({students:sparkPublicRoster(appState.students),logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    else mergeCloudState(snap.data());
+    await sparkEnsureAccounts();sparkListenTeacherAccounts();
+    currentRole="teacher";document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");
+    switchView("view-teacher-admin");renderTeacherAdmin();setSyncStatus("老師已登入・雲端同步中",true);return;
+   }
+   setSyncStatus("雲端已連接・請選擇學生",true);
+  }catch(e){console.error("Cloud startup failed",e);setSyncStatus("雲端連線錯誤，學生登入已停用",false);}
+ }
+ if(saved&&appState.students.some(x=>x.id===saved))await enterLockedStudentMode(saved,true);else renderLandingRoster();
+}
+
+
+async function adminClearAllRecords(){
+ if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ if(!window.confirm("確定要清空全班所有資料？這會刪除學生名單、累計積分、消費帳本及裝置綁定，無法復原。若中途失敗，可再次執行完成清理。"))return;
+ const classRef=classroomRef();
+ try{
+  // A persistent marker prevents teacher login from recreating deleted accounts
+  // if cleanup is interrupted between Firestore batches.
+  classroomMaintenancePending=true;
+  await classRef.set({maintenanceClearPending:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  let batch=firestoreDb.batch(),count=0;
+  async function flush(){if(count){await batch.commit();batch=firestoreDb.batch();count=0;}}
+  async function enqueue(write){if(count>=450)await flush();write(batch);count++;}
+  const revokedUids=new Set();
+  const accounts=await firestoreDb.collection("studentAccounts").get();
+  for(const accountDoc of accounts.docs){
+   const data=accountDoc.data()||{};
+   if(data.boundUid&&!revokedUids.has(data.boundUid)){
+    await enqueue(b=>b.set(firestoreDb.collection("revokedDevices").doc(data.boundUid),{
+     studentId:accountDoc.id,revokedAt:firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    revokedUids.add(data.boundUid);
+   }
+   const txs=await accountDoc.ref.collection("transactions").get();
+   for(const txDoc of txs.docs)await enqueue(b=>b.delete(txDoc.ref));
+   await enqueue(b=>b.delete(accountDoc.ref));
+  }
+  const devices=await firestoreDb.collection("devices").get();
+  for(const deviceDoc of devices.docs){
+   if(!revokedUids.has(deviceDoc.id)){
+    const data=deviceDoc.data()||{};
+    await enqueue(b=>b.set(firestoreDb.collection("revokedDevices").doc(deviceDoc.id),{
+     studentId:data.studentId||null,revokedAt:firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    revokedUids.add(deviceDoc.id);
+   }
+   await enqueue(b=>b.delete(deviceDoc.ref));
+  }
+  await flush();
+  await classRef.set({students:[],logs:[],maintenanceClearPending:false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  classroomMaintenancePending=false;
+  if(sparkAccountUnsubscribe){sparkAccountUnsubscribe();sparkAccountUnsubscribe=null;}
+  appState={students:[],logs:[]};saveLocalStateOnly();renderTeacherAdmin();renderLandingRoster();
+  showToast("全班資料、積分帳本及裝置已清理完成","Class data and device bindings cleared","🗑️");
+ }catch(e){
+  console.error("Clear all records failed",e);
+  classroomMaintenancePending=true;
+  // Do not claim rollback: earlier Firestore batches may already have committed.
+  // The maintenance marker remains true so missing accounts are not recreated.
+  const latest=await classRef.get().catch(()=>null);
+  if(latest&&latest.exists)mergeCloudState(latest.data());
+  renderTeacherAdmin();
+  showToast("清理中斷；資料庫已標記維護中。請再次執行清空以完成，不會自動重建帳戶。","Cleanup interrupted; rerun cleanup to finish safely.","⚠️");
+ }
+}
+async function logoutRole(){
+ const wasTeacher=currentRole==="teacher";
+ if(sparkTeacherAccountsUnsubscribe){sparkTeacherAccountsUnsubscribe();sparkTeacherAccountsUnsubscribe=null;}
+ if(sparkAccountUnsubscribe){sparkAccountUnsubscribe();sparkAccountUnsubscribe=null;}
+ currentRole="landing";lockedStudentId=null;sessionStorage.removeItem(SESSION_LOCK_KEY);localStorage.removeItem(SESSION_LOCK_KEY);
+ document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");
+ document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");
+ if(wasTeacher&&firebaseAuth&&isVerifiedTeacher(firebaseAuth.currentUser)){try{await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();}catch(e){console.warn("Could not return to anonymous session",e);}}
+ switchView("view-landing");renderLandingRoster();showToast("已登出並解除畫面鎖定","Logged out","👋");
+}
+
+
+function sparkPublicRoster(students){
+ return (students||[]).map(stu=>{
+  const copy={...stu};
+  copy.pointsReady=stu.migrationVersion===1&&stu.legacySpendNeedsReview===false;
+  ["spentScore","spendLogs","legacySpendNeedsReview","legacySpendOverflow","legacySpendSource","migrationVersion"].forEach(key=>delete copy[key]);
+  return copy;
+ });
+}
+function persistState(){
+ if(currentRole==="teacher"&&classroomMaintenancePending){showToast("班級清理尚未完成，暫停儲存","Class cleanup is pending","⚠️");return;}
+ saveLocalStateOnly();
+ if(currentRole==="teacher"&&isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser)&&firestoreDb){
+  classroomRef().set({students:sparkPublicRoster(appState.students),logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+   .then(()=>setSyncStatus("雲端同步正常",true))
+   .catch(e=>{console.error("Cloud save failed",e);showToast("雲端儲存失敗，請檢查連線","Cloud save failed","⚠️");setSyncStatus("雲端儲存錯誤",false);});
+ }
+}
+
+
+window.addEventListener("DOMContentLoaded",()=>{bootApplication();});
+
+
+let sparkTeacherAccountsUnsubscribe=null;
+function sparkListenTeacherAccounts(){
+ if(sparkTeacherAccountsUnsubscribe)sparkTeacherAccountsUnsubscribe();
+ if(!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ sparkTeacherAccountsUnsubscribe=firestoreDb.collection("studentAccounts").onSnapshot(snapshot=>{
+  let changed=false;
+  snapshot.forEach(doc=>{
+   const data=doc.data(),stu=appState.students.find(x=>x.id===doc.id);
+   if(stu){stu.score=Number(data.earnedScore)||0;stu.spentScore=Number(data.spentScore)||0;stu.legacySpendNeedsReview=data.legacySpendNeedsReview===true;stu.migrationVersion=Number(data.migrationVersion)||0;changed=true;}
+  });
+  if(changed){saveLocalStateOnly();if(currentRole==="teacher")renderTeacherAdmin();}
+ },error=>{console.error("Teacher account listener failed",error);setSyncStatus("積分即時同步失敗",false);});
+}
+
+
+async function sparkReleasePreviousBinding(binding){
+ if(!binding||!binding.uid||!binding.studentId)return false;
+ const account=sparkAccountRef(binding.studentId),snap=await account.get();
+ if(!snap.exists||snap.data().boundUid!==binding.uid)return false;
+ const batch=firestoreDb.batch();
+ batch.set(firestoreDb.collection("revokedDevices").doc(binding.uid),{studentId:binding.studentId,revokedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ batch.delete(sparkDeviceRef(binding.uid));
+ batch.update(account,{boundUid:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ await batch.commit();
+ return true;
+}
 </script>
 </body>
 </html>

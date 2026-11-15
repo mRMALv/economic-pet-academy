@@ -1,0 +1,17 @@
+{
+  "name": "economic-pet-academy",
+  "private": true,
+  "scripts": {
+    "test:syntax": "node tests/check-inline-script.mjs",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-econ-pet \"node --test tests/firestore.rules.test.mjs\"",
+    "test": "npm run test:syntax && npm run test:rules"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.3.0",
+    "firebase-tools": "15.36.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.5"
+  }
+}

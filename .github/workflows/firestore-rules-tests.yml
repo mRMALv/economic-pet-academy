@@ -1,0 +1,76 @@
+name: Firebase Firestore Rules and App Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feature/secure-student-points]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  firestore-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm install --no-audit --no-fund
+      - name: Summarize dependency audit
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e 'const a=require("./npm-audit.json"); console.log("Audit totals:", JSON.stringify(a.metadata?.vulnerabilities||{})); for (const [name,v] of Object.entries(a.vulnerabilities||{})) { const via=(v.via||[]).map(x=>typeof x==="string"?x:{title:x.title,url:x.url,range:x.range}); console.log(name+" | "+v.severity+" | direct="+v.isDirect+" | range="+v.range+" | via="+JSON.stringify(via)+" | fix="+JSON.stringify(v.fixAvailable)); }'
+      - name: Check application JavaScript syntax
+        run: npm run test:syntax
+      - name: Test Firestore security rules
+        run: npm run test:rules
+
+  deploy-firestore-rules:
+    name: Deploy Firestore Rules after passing tests
+    needs: firestore-rules
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/secure-student-points'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check whether Firebase deployment credentials are configured
+        id: firebase-credentials
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT_PROJECT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET }}
+          FIREBASE_SERVICE_ACCOUNT_GENERIC: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_PROJECT" ] || [ -n "$FIREBASE_SERVICE_ACCOUNT_GENERIC" ]; then
+            echo "method=service-account" >> "$GITHUB_OUTPUT"
+            echo "A Firebase service-account credential is configured."
+          elif [ -n "$FIREBASE_TOKEN" ]; then
+            echo "method=token" >> "$GITHUB_OUTPUT"
+            echo "A Firebase CLI deployment token is configured."
+          else
+            echo "method=none" >> "$GITHUB_OUTPUT"
+            echo "::notice::Firestore rules were not deployed. An authorized Firebase service-account JSON or Firebase CLI token is required as a repository secret."
+          fi
+      - name: Authenticate to Google Cloud
+        if: steps.firebase-credentials.outputs.method == 'service-account'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET || secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy Firestore Rules using service account
+        if: steps.firebase-credentials.outputs.method == 'service-account'
+        run: npx --yes firebase-tools@15.36.0 deploy --only firestore:rules --project econ-pet --non-interactive
+      - name: Deploy Firestore Rules using Firebase CLI token
+        if: steps.firebase-credentials.outputs.method == 'token'
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: npx --yes firebase-tools@15.36.0 deploy --only firestore:rules --project econ-pet --non-interactive --token "$FIREBASE_TOKEN"
+      - name: Record that deployment was skipped
+        if: steps.firebase-credentials.outputs.method == 'none'
+        run: echo "No production deployment performed; Firebase authorization is not configured in repository secrets."
