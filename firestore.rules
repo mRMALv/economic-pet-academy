@@ -25,6 +25,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/studentAccounts/$(studentId);
     }
 
+    function revokedDevicePath(uid) {
+      return /databases/$(database)/documents/revokedDevices/$(uid);
+    }
+
     function isBoundStudent(studentId) {
       return isAnonymousStudent()
         && exists(devicePath(request.auth.uid))
@@ -42,29 +46,40 @@ service cloud.firestore {
     }
 
     match /classrooms/{classroomId} {
+      // Existing classroom roster remains readable by anonymous students.
       allow read: if isAnonymousStudent() || isTeacher();
       allow create, update, delete: if isTeacher();
     }
 
+    match /revokedDevices/{uid} {
+      allow get: if isTeacher() || (signedIn() && request.auth.uid == uid);
+      allow list: if isTeacher();
+      allow create, update, delete: if isTeacher();
+    }
+
     match /devices/{uid} {
-      allow read: if isTeacher() || (signedIn() && request.auth.uid == uid);
-      // First bind must atomically claim an existing, teacher-created account.
+      allow get: if isTeacher() || (signedIn() && request.auth.uid == uid);
+      allow list: if isTeacher();
+      // A UID that a teacher revoked can never claim another student account.
       allow create: if isAnonymousStudent()
         && request.auth.uid == uid
+        && !exists(revokedDevicePath(uid))
+        && request.resource.data.keys().hasAll(['studentId', 'boundAt'])
         && request.resource.data.keys().hasOnly(['studentId', 'boundAt'])
         && request.resource.data.studentId is string
         && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid;
-      // Only the teacher may unbind or reassign a device.
       allow update, delete: if isTeacher();
     }
 
     match /studentAccounts/{studentId} {
-      allow read: if isTeacher() || isBoundStudent(studentId);
+      // Anonymous users may only look up an account that is still unbound.
+      allow get: if isTeacher()
+        || isBoundStudent(studentId)
+        || (isAnonymousStudent() && resource.data.boundUid == null);
+      allow list: if isTeacher();
 
-      // Teacher initializes and maintains earned points. A student can only:
-      // (1) bind once to an unbound account, or (2) increase spentScore
-      // in the same atomic batch that creates its immutable ledger entry.
       allow create, delete: if isTeacher();
+
       allow update: if isTeacher()
         || (
           isAnonymousStudent()
@@ -72,6 +87,7 @@ service cloud.firestore {
           && request.resource.data.boundUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['boundUid', 'updatedAt'])
           && getAfter(devicePath(request.auth.uid)).data.studentId == studentId
+          && !exists(revokedDevicePath(request.auth.uid))
         )
         || (
           isBoundStudent(studentId)
@@ -82,6 +98,7 @@ service cloud.firestore {
           && request.resource.data.spentScore > resource.data.spentScore
           && request.resource.data.spentScore <= request.resource.data.earnedScore
           && request.resource.data.lastTransactionId is string
+          && request.resource.data.lastTransactionId != resource.data.lastTransactionId
           && getAfter(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(request.resource.data.lastTransactionId)).data.amount
              == request.resource.data.spentScore - resource.data.spentScore
           && getAfter(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(request.resource.data.lastTransactionId)).data.uid
@@ -92,6 +109,7 @@ service cloud.firestore {
         allow read: if isTeacher() || isBoundStudent(studentId);
         allow create: if isBoundStudent(studentId)
           && !exists(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(transactionId))
+          && request.resource.data.keys().hasAll(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
           && request.resource.data.keys().hasOnly(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
           && request.resource.data.studentId == studentId
           && request.resource.data.uid == request.auth.uid
@@ -100,6 +118,7 @@ service cloud.firestore {
           && validSpendAction(request.resource.data.action, request.resource.data.amount)
           && request.resource.data.reason is string
           && request.resource.data.reason.size() <= 120
+          && request.resource.data.createdAt is timestamp
           && getAfter(accountPath(studentId)).data.lastTransactionId == transactionId
           && getAfter(accountPath(studentId)).data.spentScore
              == get(accountPath(studentId)).data.spentScore + request.resource.data.amount;
