@@ -44,23 +44,33 @@ jobs:
         id: firebase-credentials
         shell: bash
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET }}
+          FIREBASE_SERVICE_ACCOUNT_PROJECT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET }}
+          FIREBASE_SERVICE_ACCOUNT_GENERIC: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-            echo "Firebase deployment credential is configured."
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_PROJECT" ] || [ -n "$FIREBASE_SERVICE_ACCOUNT_GENERIC" ]; then
+            echo "method=service-account" >> "$GITHUB_OUTPUT"
+            echo "A Firebase service-account credential is configured."
+          elif [ -n "$FIREBASE_TOKEN" ]; then
+            echo "method=token" >> "$GITHUB_OUTPUT"
+            echo "A Firebase CLI deployment token is configured."
           else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Firestore rules were not deployed. Add the repository secret FIREBASE_SERVICE_ACCOUNT_ECON_PET with a Firebase service-account JSON that has Firestore Rules deployment permission."
+            echo "method=none" >> "$GITHUB_OUTPUT"
+            echo "::notice::Firestore rules were not deployed. An authorized Firebase service-account JSON or Firebase CLI token is required as a repository secret."
           fi
       - name: Authenticate to Google Cloud
-        if: steps.firebase-credentials.outputs.configured == 'true'
+        if: steps.firebase-credentials.outputs.method == 'service-account'
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET }}
-      - name: Deploy Firestore Rules to econ-pet
-        if: steps.firebase-credentials.outputs.configured == 'true'
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET || secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy Firestore Rules using service account
+        if: steps.firebase-credentials.outputs.method == 'service-account'
         run: npx --yes firebase-tools@15.36.0 deploy --only firestore:rules --project econ-pet --non-interactive
+      - name: Deploy Firestore Rules using Firebase CLI token
+        if: steps.firebase-credentials.outputs.method == 'token'
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: npx --yes firebase-tools@15.36.0 deploy --only firestore:rules --project econ-pet --non-interactive --token "$FIREBASE_TOKEN"
       - name: Record that deployment was skipped
-        if: steps.firebase-credentials.outputs.configured != 'true'
-        run: echo "No production deployment performed; GitHub secret FIREBASE_SERVICE_ACCOUNT_ECON_PET is required."
+        if: steps.firebase-credentials.outputs.method == 'none'
+        run: echo "No production deployment performed; Firebase authorization is not configured in repository secrets."
