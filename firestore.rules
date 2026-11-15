@@ -29,6 +29,17 @@ service cloud.firestore {
       return /databases/$(database)/documents/revokedDevices/$(uid);
     }
 
+    function studentInvitePath(inviteId) {
+      return /databases/$(database)/documents/studentInvites/$(inviteId);
+    }
+
+    function isBoundStudentSession() {
+      return isAnonymousStudent()
+        && exists(devicePath(request.auth.uid))
+        && get(devicePath(request.auth.uid)).data.studentId is string
+        && isBoundStudent(get(devicePath(request.auth.uid)).data.studentId);
+    }
+
     function isBoundStudent(studentId) {
       return isAnonymousStudent()
         && exists(devicePath(request.auth.uid))
@@ -51,9 +62,27 @@ service cloud.firestore {
     }
 
     match /classrooms/{classroomId} {
-      // Existing classroom roster remains readable by anonymous students.
-      allow read: if isAnonymousStudent() || isTeacher();
+      // The roster is private: teachers and already-bound students only.
+      allow read: if isTeacher() || isBoundStudentSession();
       allow create, update, delete: if isTeacher();
+    }
+
+    match /studentInvites/{inviteId} {
+      // A student can retrieve only a code-hash document whose random ID they know.
+      // Listing invite documents is teacher-only; the raw code is never stored.
+      allow get: if isAnonymousStudent();
+      allow list: if isTeacher();
+      allow create, update: if isTeacher()
+        && request.resource.data.keys().hasAll(['studentId', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['studentId', 'createdAt'])
+        && request.resource.data.studentId is string
+        && request.resource.data.createdAt is timestamp;
+      allow delete: if isTeacher() || (
+        isAnonymousStudent()
+        && getAfter(devicePath(request.auth.uid)).data.inviteId == inviteId
+        && getAfter(devicePath(request.auth.uid)).data.studentId == resource.data.studentId
+        && getAfter(accountPath(resource.data.studentId)).data.boundUid == request.auth.uid
+      );
     }
 
     match /revokedDevices/{uid} {
@@ -69,9 +98,12 @@ service cloud.firestore {
       allow create: if isAnonymousStudent()
         && request.auth.uid == uid
         && !exists(revokedDevicePath(uid))
-        && request.resource.data.keys().hasAll(['studentId', 'boundAt'])
-        && request.resource.data.keys().hasOnly(['studentId', 'boundAt'])
+        && request.resource.data.keys().hasAll(['studentId', 'inviteId', 'boundAt'])
+        && request.resource.data.keys().hasOnly(['studentId', 'inviteId', 'boundAt'])
         && request.resource.data.studentId is string
+        && request.resource.data.inviteId is string
+        && exists(studentInvitePath(request.resource.data.inviteId))
+        && get(studentInvitePath(request.resource.data.inviteId)).data.studentId == request.resource.data.studentId
         && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid
         && isStudentAccountReady(getAfter(accountPath(request.resource.data.studentId)).data);
       allow update, delete: if isTeacher();
@@ -94,6 +126,10 @@ service cloud.firestore {
           && request.resource.data.boundUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['boundUid', 'updatedAt'])
           && getAfter(devicePath(request.auth.uid)).data.studentId == studentId
+          && getAfter(devicePath(request.auth.uid)).data.inviteId is string
+          && exists(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId))
+          && get(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId)).data.studentId == studentId
+          && !existsAfter(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId))
           && !exists(revokedDevicePath(request.auth.uid))
         )
         || (
