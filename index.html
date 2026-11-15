@@ -287,7 +287,16 @@ async function sparkEnsureAccounts(){
 async function sparkBindStudent(studentId){
  const user=firebaseAuth&&firebaseAuth.currentUser;
  if(!user||!user.isAnonymous)throw new Error("學生登入狀態無效，請重新整理");
- const uid=user.uid,device=sparkDeviceRef(uid),account=sparkAccountRef(studentId),deviceSnap=await device.get();
+ const uid=user.uid,device=sparkDeviceRef(uid),account=sparkAccountRef(studentId);
+ const revoked=await firestoreDb.collection("revokedDevices").doc(uid).get();
+ if(revoked.exists){
+  // After a teacher releases this device, rotate the anonymous UID so the old,
+  // revoked identity cannot be reused and the student can select a name again.
+  await firebaseAuth.signOut();
+  await firebaseAuth.signInAnonymously();
+  return sparkBindStudent(studentId);
+ }
+ const deviceSnap=await device.get();
  if(deviceSnap.exists){
   if(deviceSnap.data().studentId!==studentId)throw new Error("這部裝置已綁定其他學生。請老師協助解除裝置後再選擇。");
   const accountSnap=await account.get();
