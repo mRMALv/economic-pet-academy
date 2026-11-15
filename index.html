@@ -135,7 +135,6 @@ async function confirmStudentSelection(){
  await enterLockedStudentMode(studentId,true);
  if(currentRole==="student"&&lockedStudentId===studentId)showToast("已確認姓名並進入學生頁面。","Student selection confirmed","✅");
 }
-function enterLockedStudentMode(
 function enterLockedStudentMode(id,silent=false){const stu=appState.students.find(s=>s.id===id);if(!stu)return;currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);document.getElementById("nav-student-locked").classList.remove("hidden");document.getElementById("nav-student-locked").classList.add("flex");document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");updateTopNavForStudent(stu);if(!silent)showToast("已鎖定學生帳號："+stu.name,"Locked to student account","🔒");if(!stu.petCreated)openPetWizard(false);else{switchView("view-student-room");renderStudentRoom();}}
 function updateTopNavForStudent(stu){document.getElementById("nav-student-label").textContent="🔒 學生："+stu.name;document.getElementById("nav-student-score").textContent=getAvailableScore(stu)+" 可用分";}
 function getAvailableScore(stu){return Math.max(0,(Number(stu?.score)||0)-(Number(stu?.spentScore)||0));}
