@@ -137,7 +137,7 @@ function adminTriggerStudentWish(id){const stu=appState.students.find(s=>s.id===
 function triggerClassWideRequest(){appState.students.forEach(stu=>{const pool=WISH_POOL.filter(w=>w.id!==stu.wishId);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;});persistState();renderTeacherAdmin();showToast("已向全班發送新心願！","Class wishes broadcast","📢");}
 async function adminClearAllRecords(){if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth?.currentUser)){showToast("只有已驗證的老師可以清空資料","Teacher access required","🔒");return;}const confirmed=window.confirm("確定要清空全班所有資料嗎？\n\n這會永久刪除：學生名單、所有積分、寵物資料、寵物狀態及評分紀錄。\n\n此動作無法復原。");if(!confirmed)return;const previous=appState;appState={students:[],logs:[]};saveLocalStateOnly();try{await classroomRef().set({students:[],logs:[],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});renderTeacherAdmin();renderLandingRoster();showToast("全班學生、寵物、積分及紀錄已清空","All classroom records cleared","🗑️");}catch(e){console.error("Clear all records failed",e);appState=previous;saveLocalStateOnly();renderTeacherAdmin();showToast("清空失敗，原有資料已恢復","Clear failed; previous data restored","⚠️");}}
 function renderTeacherAdmin(){document.getElementById("admin-total-students")?.textContent;document.getElementById("admin-students-list").innerHTML=appState.students.map(stu=>{const pet=PET_SPECIES.find(p=>p.id===stu.petId),wish=WISH_POOL.find(w=>w.id===stu.wishId)||WISH_POOL[0];return `
-<div class="bg-white rounded-3xl shadow-md p-5 border space-y-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div class="flex items-center gap-3"><div class="w-14 h-14 rounded-2xl bg-amber-50 border p-1 flex items-center justify-center text-4xl">${pet?pet.emoji:"🥚"}</div><div><h4 class="text-base font-black">${escapeHTML(stu.name)}</h4><p class="text-xs font-bold text-indigo-700">${stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物"}</p><p class="text-[11px] text-slate-500">💌 ${wish.zh} (需 ${wish.req} 分)</p></div></div><div class="flex items-center gap-2"><button onclick="adminTriggerStudentWish('${stu.id}')" class="px-3 py-2 rounded-xl bg-purple-50 text-purple-700 border text-xs font-bold">💌 換心願</button><div class="px-4 py-2 rounded-2xl bg-amber-400 text-amber-950 font-black">累計獲得 ${stu.score} 分</div><div class="text-[11px] font-bold text-slate-600">已消費 ${stu.spentScore||0} · 可用 ${getAvailableScore(stu)}</div><button onclick="sparkReleaseDevice('${stu.id}')" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 border text-xs font-bold">解除裝置</button></div></div><div class="flex flex-wrap gap-1.5 pt-2 border-t"><span class="text-[11px] font-extrabold text-slate-500">⚡ 快捷評分:</span><button onclick="adminAdjustScore('${stu.id}',2,'積極回答 Active Answer')" class="px-2.5 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold">+2 積極回答</button><button onclick="adminAdjustScore('${stu.id}',5,'經濟學神分析 Great Econ Insight')" class="px-2.5 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold">+5 神分析</button><button onclick="adminAdjustScore('${stu.id}',10,'小組優勝 Team Winner')" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">+10 小組優勝</button><button onclick="adminAdjustScore('${stu.id}',-2,'分心聊天 Distracted')" class="px-2.5 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold">-2 分心聊天</button><button onclick="adminAdjustScore('${stu.id}',-5,'未交功課 Missing Work')" class="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold">-5 未交功課</button></div><div class="bg-slate-50 rounded-2xl p-3 border flex flex-col sm:flex-row gap-2"><input id="custom-pts-${stu.id}" type="number" value="3" class="w-full sm:w-24 px-3 py-1.5 rounded-xl border text-xs font-black text-center"><input id="custom-reason-${stu.id}" type="text" placeholder="輸入加減分理由" class="flex-1 px-3 py-1.5 rounded-xl border text-xs"><button onclick="adminApplyCustomScore('${stu.id}')" class="px-4 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-black">確認調整</button></div></div>`;}).join("");document.getElementById("admin-activity-log").innerHTML=appState.logs.length?appState.logs.map(l=>`<div class="p-3 rounded-2xl bg-slate-50 border flex items-center justify-between gap-2"><div class="min-w-0"><p class="font-black">${escapeHTML(l.studentName)}</p><p class="text-[11px] text-slate-600">${escapeHTML(l.reason)}</p><p class="text-[10px] text-slate-400">${l.time}</p></div><span class="px-2.5 py-1 rounded-xl font-black ${l.delta>=0?"bg-emerald-100 text-emerald-700":"bg-rose-100 text-rose-700"}">${l.delta>=0?"+":""}${l.delta} 分</span></div>`).join(""):'<p class="text-slate-400 text-center py-6">尚無積分異動紀錄</p>';}
+<div class="bg-white rounded-3xl shadow-md p-5 border space-y-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div class="flex items-center gap-3"><div class="w-14 h-14 rounded-2xl bg-amber-50 border p-1 flex items-center justify-center text-4xl">${pet?pet.emoji:"🥚"}</div><div><h4 class="text-base font-black">${escapeHTML(stu.name)}</h4><p class="text-xs font-bold text-indigo-700">${stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物"}</p><p class="text-[11px] text-slate-500">💌 ${wish.zh} (需 ${wish.req} 分)</p></div></div><div class="flex items-center gap-2"><button onclick="adminTriggerStudentWish('${stu.id}')" class="px-3 py-2 rounded-xl bg-purple-50 text-purple-700 border text-xs font-bold">💌 換心願</button><div class="px-4 py-2 rounded-2xl bg-amber-400 text-amber-950 font-black">累計獲得 ${stu.score} 分</div><div class="text-[11px] font-bold text-slate-600">已消費 ${stu.spentScore||0} · 可用 ${getAvailableScore(stu)}</div>${stu.legacySpendNeedsReview?'<div class="text-[10px] font-bold text-amber-700">⚠️ 舊消費紀錄需核對</div>':''}<button onclick="sparkReleaseDevice('${stu.id}')" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 border text-xs font-bold">解除裝置</button></div></div><div class="flex flex-wrap gap-1.5 pt-2 border-t"><span class="text-[11px] font-extrabold text-slate-500">⚡ 快捷評分:</span><button onclick="adminAdjustScore('${stu.id}',2,'積極回答 Active Answer')" class="px-2.5 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold">+2 積極回答</button><button onclick="adminAdjustScore('${stu.id}',5,'經濟學神分析 Great Econ Insight')" class="px-2.5 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold">+5 神分析</button><button onclick="adminAdjustScore('${stu.id}',10,'小組優勝 Team Winner')" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">+10 小組優勝</button><button onclick="adminAdjustScore('${stu.id}',-2,'分心聊天 Distracted')" class="px-2.5 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold">-2 分心聊天</button><button onclick="adminAdjustScore('${stu.id}',-5,'未交功課 Missing Work')" class="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold">-5 未交功課</button></div><div class="bg-slate-50 rounded-2xl p-3 border flex flex-col sm:flex-row gap-2"><input id="custom-pts-${stu.id}" type="number" value="3" class="w-full sm:w-24 px-3 py-1.5 rounded-xl border text-xs font-black text-center"><input id="custom-reason-${stu.id}" type="text" placeholder="輸入加減分理由" class="flex-1 px-3 py-1.5 rounded-xl border text-xs"><button onclick="adminApplyCustomScore('${stu.id}')" class="px-4 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-black">確認調整</button></div></div>`;}).join("");document.getElementById("admin-activity-log").innerHTML=appState.logs.length?appState.logs.map(l=>`<div class="p-3 rounded-2xl bg-slate-50 border flex items-center justify-between gap-2"><div class="min-w-0"><p class="font-black">${escapeHTML(l.studentName)}</p><p class="text-[11px] text-slate-600">${escapeHTML(l.reason)}</p><p class="text-[10px] text-slate-400">${l.time}</p></div><span class="px-2.5 py-1 rounded-xl font-black ${l.delta>=0?"bg-emerald-100 text-emerald-700":"bg-rose-100 text-rose-700"}">${l.delta>=0?"+":""}${l.delta} 分</span></div>`).join(""):'<p class="text-slate-400 text-center py-6">尚無積分異動紀錄</p>';}
 
 
 let sparkAccountUnsubscribe=null;
@@ -152,7 +152,11 @@ async function sparkEnsureAccounts(){
  for(const stu of appState.students){
   const ref=sparkAccountRef(stu.id),snap=await ref.get();
   if(!snap.exists){
-   const legacy=legacySpendSnapshots.get(stu.id)||null;
+   const legacy=legacySpendSnapshots.get(stu.id)||(
+    Object.prototype.hasOwnProperty.call(stu,"spentScore")||Array.isArray(stu.spendLogs)
+     ?{spentScore:Number(stu.spentScore)||0,spendLogs:Array.isArray(stu.spendLogs)?stu.spendLogs:[]}
+     :null
+   );
    const earned=Math.max(0,Math.floor(Number(stu.score)||0));
    const logs=legacy&&Array.isArray(legacy.spendLogs)?legacy.spendLogs:[];
    const loggedTotal=logs.reduce((sum,x)=>sum+Math.max(0,Math.floor(Math.abs(Number(x&&x.delta)||0))),0);
@@ -160,7 +164,7 @@ async function sparkEnsureAccounts(){
    const spent=Math.min(earned,requested);
    await ref.set({
     studentId:stu.id,earnedScore:earned,spentScore:spent,boundUid:null,lastTransactionId:null,
-    legacySpendNeedsReview:!legacy,
+    legacySpendNeedsReview:!legacy&&earned>0 || requested>earned,
     legacySpendOverflow:Math.max(0,requested-spent),
     legacySpendSource:legacy?"teacher-browser-local-data":"not-found-on-teacher-device",
     migrationVersion:1,
@@ -197,6 +201,11 @@ async function sparkEnsureAccounts(){
    legacySpendSnapshots.delete(stu.id);
   }else{
    const d=snap.data();stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;
+   stu.legacySpendNeedsReview=!!d.legacySpendNeedsReview;
+   if(!d.migrationVersion){
+    await ref.update({migrationVersion:1,legacySpendNeedsReview:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    stu.legacySpendNeedsReview=true;
+   }
    legacySpendSnapshots.delete(stu.id);
   }
  }
@@ -463,7 +472,7 @@ function sparkListenTeacherAccounts(){
   let changed=false;
   snapshot.forEach(doc=>{
    const data=doc.data(),stu=appState.students.find(x=>x.id===doc.id);
-   if(stu){stu.score=Number(data.earnedScore)||0;stu.spentScore=Number(data.spentScore)||0;changed=true;}
+   if(stu){stu.score=Number(data.earnedScore)||0;stu.spentScore=Number(data.spentScore)||0;stu.legacySpendNeedsReview=!!data.legacySpendNeedsReview;changed=true;}
   });
   if(changed){saveLocalStateOnly();if(currentRole==="teacher")renderTeacherAdmin();}
  },error=>{console.error("Teacher account listener failed",error);setSyncStatus("積分即時同步失敗",false);});
