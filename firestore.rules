@@ -107,7 +107,10 @@ service cloud.firestore {
 
       match /transactions/{transactionId} {
         allow read: if isTeacher() || isBoundStudent(studentId);
-        allow create: if isBoundStudent(studentId)
+        // Teachers may append legacy-import entries during the one-time migration.
+        // Students can never manufacture migration records.
+        allow create: if isTeacher() || (
+          isBoundStudent(studentId)
           && !exists(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(transactionId))
           && request.resource.data.keys().hasAll(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
           && request.resource.data.keys().hasOnly(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
@@ -121,7 +124,8 @@ service cloud.firestore {
           && request.resource.data.createdAt is timestamp
           && getAfter(accountPath(studentId)).data.lastTransactionId == transactionId
           && getAfter(accountPath(studentId)).data.spentScore
-             == get(accountPath(studentId)).data.spentScore + request.resource.data.amount;
+             == get(accountPath(studentId)).data.spentScore + request.resource.data.amount
+        );
         allow update: if false;
         allow delete: if isTeacher();
       }
