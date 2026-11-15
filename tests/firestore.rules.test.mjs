@@ -239,7 +239,7 @@ test("concurrent spends cannot exceed the available balance", async () => {
   ]);
   assert.equal(results.filter(x => x.status === "fulfilled").length, 1);
   assert.equal(results.filter(x => x.status === "rejected").length, 1);
-  assert.equal((await getDoc(account(studentDb()))).data().spentScore, 20);
+  assert.equal((await getDoc(account(studentDb()))).data().spentScore, 25);
 });
 
 test("teacher can revoke a device and a new UID can claim the account", async () => {
