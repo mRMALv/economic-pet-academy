@@ -457,8 +457,9 @@ async function enterLockedStudentMode(id,silent=false){
   mergeCloudState(classSnap.data());
   const stu=appState.students.find(x=>x.id===id);
   if(!stu)throw new Error("找不到這位學生的班級資料，請聯絡老師。");
-  if(stu.pointsReady===false||stu.legacySpendNeedsReview===true){showToast("這個學生的舊積分尚待老師核對，暫時不能登入。","Legacy points need teacher reconciliation.","⚠️");return;}
+  // The account document is authoritative; the public roster's pointsReady flag may be stale.
   stu.score=Number(account.earnedScore)||0;stu.spentScore=Number(account.spentScore)||0;stu.migrationVersion=Number(account.migrationVersion)||0;stu.legacySpendNeedsReview=account.legacySpendNeedsReview===true;
+  stu.pointsReady=account.migrationVersion===1&&account.legacySpendNeedsReview===false;
   sparkApplyStudentProfile(stu,account);
   await sparkLoadTransactions(id);
   currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);
@@ -544,7 +545,8 @@ async function adminAdjustScore(id,delta,reason){
    nextEarned=Math.max(spent,earned+amount);
    if(nextEarned===earned)throw new Error("扣分不能令累計獲得積分低於已消費積分");
    const classData=classSnap.exists?classSnap.data():{};
-   nextStudents=(Array.isArray(classData.students)?classData.students:appState.students).map(x=>x.id===id?{...x,score:nextEarned}:x);
+   const accountReady=data.migrationVersion===1&&data.legacySpendNeedsReview===false;
+   nextStudents=(Array.isArray(classData.students)?classData.students:appState.students).map(x=>x.id===id?{...x,score:nextEarned,pointsReady:accountReady}:x);
    nextLogs=Array.isArray(classData.logs)?classData.logs.slice():appState.logs.slice();
    nextLogs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:nextEarned-earned,reason:reason||"老師評分 Teacher Score",time:time});
    if(nextLogs.length>50)nextLogs.pop();
@@ -650,7 +652,10 @@ async function logoutRole(){
 function sparkPublicRoster(students){
  return (students||[]).map(stu=>{
   const copy={...stu};
-  copy.pointsReady=stu.migrationVersion===1&&stu.legacySpendNeedsReview===false;
+  const hasMigrationState=Object.prototype.hasOwnProperty.call(stu,"migrationVersion")||Object.prototype.hasOwnProperty.call(stu,"legacySpendNeedsReview");
+  copy.pointsReady=hasMigrationState
+   ?stu.migrationVersion===1&&stu.legacySpendNeedsReview===false
+   :(typeof stu.pointsReady==="boolean"?stu.pointsReady:false);
   ["spentScore","spendLogs","legacySpendNeedsReview","legacySpendOverflow","legacySpendSource","migrationVersion"].forEach(key=>delete copy[key]);
   return copy;
  });
