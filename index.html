@@ -446,7 +446,6 @@ async function enterLockedStudentMode(id,silent=false){
   showToast(msg,"Could not open this student account.","⚠️");setSyncStatus("學生帳戶未能登入",false);
  }
 }
-async function interactCare(
 async function interactCare(type){
  const stu=getLockedStudent();if(!stu)return;
  const costs={pet:1,feed:5,bathe:10,play:15},cost=costs[type];if(!Number.isInteger(cost))return;
@@ -500,7 +499,6 @@ async function adminAddStudent(){
   renderTeacherAdmin();renderLandingRoster();showToast("已新增學生："+name,"Student added to the roster","✅");
  }catch(e){console.error(e);showToast(e.message||"新增學生失敗，請重試","Could not add student","⚠️");}
 }
-async function adminAdjustScore(
 async function adminAdjustScore(id,delta,reason){
  if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
  if(classroomMaintenancePending){showToast("班級清理尚未完成，暫停調整積分","Class cleanup is pending","⚠️");return;}
