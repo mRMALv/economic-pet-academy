@@ -101,9 +101,16 @@ function listenCloudState(){if(!firestoreDb)return;if(classroomUnsubscribe)class
 async function bootApplication(){loadLocalData();const saved=sessionStorage.getItem(SESSION_LOCK_KEY)||localStorage.getItem(SESSION_LOCK_KEY);if(initializeFirebaseServices()){try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);const existingUser=await new Promise(resolve=>{const off=firebaseAuth.onAuthStateChanged(user=>{off();resolve(user);});});if(!existingUser)await firebaseAuth.signInAnonymously();listenCloudState();if(isVerifiedTeacher(firebaseAuth.currentUser)){const ref=classroomRef(),snapshot=await ref.get();if(!snapshot.exists)await ref.set({students:sparkPublicRoster(appState.students),logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});else mergeCloudState(snapshot.data());currentRole="teacher";document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");switchView("view-teacher-admin");renderTeacherAdmin();setSyncStatus("老師已登入・雲端同步中",true);return;}setSyncStatus("雲端已連接・學生唯讀",true);}catch(e){console.error("Cloud startup failed",e);setSyncStatus("本機展示模式（雲端未連線）",false);}}if(saved&&appState.students.some(s=>s.id===saved))enterLockedStudentMode(saved,true);else renderLandingRoster();}
 function switchView(id){["view-landing","view-student-wizard","view-student-room","view-teacher-admin"].forEach(x=>document.getElementById(x).classList.add("hidden"));document.getElementById(id).classList.remove("hidden");}
 function getLockedStudent(){return appState.students.find(s=>s.id===lockedStudentId);}
-function renderLandingRoster(){const grid=document.getElementById("landing-roster-grid");grid.innerHTML=appState.students.map(stu=>{const pet=PET_SPECIES.find(p=>p.id===stu.petId);return `
-<button onclick="enterLockedStudentMode('${stu.id}',false)" class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-200 text-left shadow-sm">
-<div class="flex items-center gap-3"><div class="w-11 h-11 rounded-xl bg-white border p-1 flex items-center justify-center text-3xl">${pet?pet.emoji:"🥚"}</div><div><p class="text-sm font-black">${escapeHTML(stu.name)}</p><p class="text-[11px] text-slate-500">${stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物 Not Adopted Yet"}</p></div></div><span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black">${Number(stu.score)||0} 累計分</span></button>`;}).join("")||'<p class="text-xs text-slate-400">目前沒有學生，請新增帳號。</p>';}
+function renderLandingRoster(){
+ const grid=document.getElementById("landing-roster-grid");
+ grid.innerHTML=appState.students.map(stu=>{
+  const pet=PET_SPECIES.find(p=>p.id===stu.petId);
+  const blocked=stu.pointsReady===false||stu.legacySpendNeedsReview===true;
+  return `
+<button ${blocked?"disabled":""} onclick="enterLockedStudentMode('${stu.id}',false)" class="flex items-center justify-between p-3 rounded-2xl border border-slate-200 text-left shadow-sm ${blocked?"bg-slate-100 opacity-70 cursor-not-allowed":"bg-slate-50 hover:bg-amber-50"}">
+<div class="flex items-center gap-3"><div class="w-11 h-11 rounded-xl bg-white border p-1 flex items-center justify-center text-3xl">${pet?pet.emoji:"🥚"}</div><div><p class="text-sm font-black">${escapeHTML(stu.name)}</p><p class="text-[11px] text-slate-500">${blocked?"舊積分待老師核對":(stu.petCreated?escapeHTML(stu.adjZH+stu.conceptZH):"尚未領養寵物 Not Adopted Yet")}</p></div></div><span class="px-2.5 py-1 rounded-full ${blocked?"bg-slate-200 text-slate-700":"bg-amber-100 text-amber-900"} text-xs font-black">${blocked?"暫停登入":(Number(stu.score)||0)+" 累計分"}</span></button>`;
+ }).join("")||'<p class="text-xs text-slate-400">目前沒有學生，請新增帳號。</p>';
+}
 function registerAndLoginStudent(){showToast("請老師先在後台新增你的名字！","Ask your teacher to add you to the roster first.","👩‍🏫");}
 function enterLockedStudentMode(id,silent=false){const stu=appState.students.find(s=>s.id===id);if(!stu)return;currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);document.getElementById("nav-student-locked").classList.remove("hidden");document.getElementById("nav-student-locked").classList.add("flex");document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");updateTopNavForStudent(stu);if(!silent)showToast("已鎖定學生帳號："+stu.name,"Locked to student account","🔒");if(!stu.petCreated)openPetWizard(false);else{switchView("view-student-room");renderStudentRoom();}}
 function updateTopNavForStudent(stu){document.getElementById("nav-student-label").textContent="🔒 學生："+stu.name;document.getElementById("nav-student-score").textContent=getAvailableScore(stu)+" 可用分";}
@@ -164,13 +171,14 @@ async function sparkEnsureAccounts(){
    const loggedTotal=logs.reduce((sum,x)=>sum+Math.max(0,Math.floor(Math.abs(Number(x&&x.delta)||0))),0);
    const requested=legacy?Math.max(Math.floor(Number(legacy.spentScore)||0),loggedTotal):0;
    const spent=Math.min(earned,requested);
+   const needsReview=(!legacy&&earned>0)||requested>earned;
    // Account and its import ledger are committed atomically so a retry cannot
    // leave a migrated balance without its corresponding audit records.
    let remaining=spent,seq=0;
    const migrationBatch=firestoreDb.batch();
    migrationBatch.set(ref,{
     studentId:stu.id,earnedScore:earned,spentScore:spent,boundUid:null,lastTransactionId:null,
-    legacySpendNeedsReview:(!legacy&&earned>0)||requested>earned,
+    legacySpendNeedsReview:needsReview,
     legacySpendOverflow:Math.max(0,requested-spent),
     legacySpendSource:legacy?"teacher-browser-local-data":"not-found-on-teacher-device",
     migrationVersion:1,
@@ -200,6 +208,7 @@ async function sparkEnsureAccounts(){
    }
    await migrationBatch.commit();
    stu.spentScore=spent;
+   stu.legacySpendNeedsReview=needsReview;
    legacySpendSnapshots.delete(stu.id);
   }else{
    const d=snap.data();stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;
@@ -223,6 +232,7 @@ async function sparkBindStudent(studentId){
   if(deviceSnap.data().studentId!==studentId)throw new Error("這部裝置已綁定其他帳戶，請聯絡老師");
   const accountSnap=await account.get();
   if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("裝置綁定資料不一致，請聯絡老師");
+  if(accountSnap.data().legacySpendNeedsReview===true)throw new Error("舊積分尚待老師核對，請稍後再登入");
   return accountSnap.data();
  }
  if(!window.confirm("你選擇的是「"+(appState.students.find(x=>x.id===studentId)?.name||"這位學生")+"」。\n\n確認後，這個瀏覽器會綁定到該學生帳戶，之後不能自行切換其他學生；如選錯或換裝置，請聯絡老師解除綁定。\n\n確定要綁定嗎？"))throw new Error("你已取消學生裝置綁定");
@@ -290,7 +300,11 @@ async function sparkReconcileLegacySpend(studentId){
   });
   stu.spentScore=value;stu.legacySpendNeedsReview=false;
   await sparkLoadTransactions(studentId);
-  saveLocalStateOnly();renderTeacherAdmin();
+  await classroomRef().set({
+   students:sparkPublicRoster(appState.students),
+   updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true});
+  saveLocalStateOnly();renderTeacherAdmin();renderLandingRoster();
   showToast("舊消費紀錄已核對並同步","Legacy spend history reconciled","✅");
  }catch(e){console.error("Legacy spend reconciliation failed",e);showToast(e.message||"核對失敗，請重試","Reconciliation failed","⚠️");}
 }
@@ -337,9 +351,17 @@ function mergeCloudState(data){
 }
 async function enterLockedStudentMode(id,silent=false){
  const stu=appState.students.find(x=>x.id===id);if(!stu)return;
+ if(stu.pointsReady===false||stu.legacySpendNeedsReview===true){
+  showToast("這個學生的舊積分尚待老師核對，暫時不能登入。","Legacy points need teacher reconciliation before login.","⚠️");
+  return;
+ }
  try{
   setSyncStatus("正在確認裝置綁定…",false);
   const account=await sparkBindStudent(id);
+  if(account.legacySpendNeedsReview===true){
+   showToast("這個學生的舊積分尚待老師核對，請聯絡老師。","Legacy points need teacher reconciliation.","⚠️");
+   return;
+  }
   stu.score=Number(account.earnedScore)||0;stu.spentScore=Number(account.spentScore)||0;
   await sparkLoadTransactions(id);
   currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);
@@ -503,6 +525,7 @@ async function logoutRole(){
 function sparkPublicRoster(students){
  return (students||[]).map(stu=>{
   const copy={...stu};
+  copy.pointsReady=stu.legacySpendNeedsReview!==true;
   ["spentScore","spendLogs","legacySpendNeedsReview","legacySpendOverflow","legacySpendSource","migrationVersion"].forEach(key=>delete copy[key]);
   return copy;
  });
