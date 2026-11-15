@@ -67,7 +67,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll(['studentId', 'boundAt'])
         && request.resource.data.keys().hasOnly(['studentId', 'boundAt'])
         && request.resource.data.studentId is string
-        && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid;
+        && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid
+        && getAfter(accountPath(request.resource.data.studentId)).data.legacySpendNeedsReview != true;
       allow update, delete: if isTeacher();
     }
 
@@ -84,6 +85,7 @@ service cloud.firestore {
         || (
           isAnonymousStudent()
           && resource.data.boundUid == null
+          && resource.data.legacySpendNeedsReview != true
           && request.resource.data.boundUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['boundUid', 'updatedAt'])
           && getAfter(devicePath(request.auth.uid)).data.studentId == studentId
@@ -91,6 +93,7 @@ service cloud.firestore {
         )
         || (
           isBoundStudent(studentId)
+          && resource.data.legacySpendNeedsReview != true
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spentScore', 'lastTransactionId', 'updatedAt'])
           && request.resource.data.earnedScore == resource.data.earnedScore
           && request.resource.data.boundUid == resource.data.boundUid
@@ -111,6 +114,7 @@ service cloud.firestore {
         // Students can never manufacture migration records.
         allow create: if isTeacher() || (
           isBoundStudent(studentId)
+          && get(accountPath(studentId)).data.legacySpendNeedsReview != true
           && !exists(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(transactionId))
           && request.resource.data.keys().hasAll(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
           && request.resource.data.keys().hasOnly(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
