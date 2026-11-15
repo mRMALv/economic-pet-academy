@@ -112,7 +112,7 @@ function recordStudentSpend(stu,amount,reason){stu.spentScore=(Number(stu.spentS
 async function logoutRole(){const wasTeacher=currentRole==="teacher";currentRole="landing";lockedStudentId=null;sessionStorage.removeItem(SESSION_LOCK_KEY);localStorage.removeItem(SESSION_LOCK_KEY);document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");if(wasTeacher&&firebaseAuth&&isVerifiedTeacher(firebaseAuth.currentUser)){try{await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();}catch(e){console.warn("Could not return to anonymous session",e);}}switchView("view-landing");renderLandingRoster();showToast("已登出並解除帳號鎖定","Logged out","👋");}
 function openTeacherPasscodeModal(){const m=document.getElementById("teacher-modal");document.getElementById("teacher-email-input").value=TEACHER_EMAIL;document.getElementById("teacher-password-input").value="";const error=document.getElementById("teacher-passcode-error");error.textContent="";error.classList.add("hidden");m.classList.remove("hidden");m.classList.add("flex");document.getElementById("teacher-password-input").focus();}
 function closeTeacherPasscodeModal(){const m=document.getElementById("teacher-modal");m.classList.add("hidden");m.classList.remove("flex");}
-async function verifyTeacherPasscode(){const email=document.getElementById("teacher-email-input").value.trim().toLowerCase(),password=document.getElementById("teacher-password-input").value,error=document.getElementById("teacher-passcode-error");error.classList.add("hidden");if(email!==TEACHER_EMAIL){error.textContent="這不是已授權的老師帳號。";error.classList.remove("hidden");return;}if(!firebaseAuth){error.textContent="目前無法連接 Firebase，請稍後重試。";error.classList.remove("hidden");return;}try{const credential=await firebaseAuth.signInWithEmailAndPassword(email,password);if(!credential.user.emailVerified){try{await credential.user.sendEmailVerification();}catch(sendError){console.warn("Verification email could not be sent",sendError);}await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="請先到老師信箱完成 Email 驗證，再重新登入。驗證信已嘗試寄出。";error.classList.remove("hidden");return;}if(!isVerifiedTeacher(credential.user)){await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="此帳號未獲老師管理權限。";error.classList.remove("hidden");return;}const ref=classroomRef(),snapshot=await ref.get();if(snapshot.exists){mergeCloudState(snapshot.data());}else{await ref.set({students:appState.students,logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});}await sparkEnsureAccounts();closeTeacherPasscodeModal();currentRole="teacher";lockedStudentId=null;document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");switchView("view-teacher-admin");renderTeacherAdmin();listenCloudState();setSyncStatus("老師已登入・雲端同步中",true);showToast("老師登入成功！歡迎回來。","Teacher login successful","👩‍🏫");}catch(e){console.error("Teacher login failed",e);error.textContent="登入失敗，請確認 Email 和密碼是否正確。";error.classList.remove("hidden");}}
+async function verifyTeacherPasscode(){const email=document.getElementById("teacher-email-input").value.trim().toLowerCase(),password=document.getElementById("teacher-password-input").value,error=document.getElementById("teacher-passcode-error");error.classList.add("hidden");if(email!==TEACHER_EMAIL){error.textContent="這不是已授權的老師帳號。";error.classList.remove("hidden");return;}if(!firebaseAuth){error.textContent="目前無法連接 Firebase，請稍後重試。";error.classList.remove("hidden");return;}try{const credential=await firebaseAuth.signInWithEmailAndPassword(email,password);if(!credential.user.emailVerified){try{await credential.user.sendEmailVerification();}catch(sendError){console.warn("Verification email could not be sent",sendError);}await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="請先到老師信箱完成 Email 驗證，再重新登入。驗證信已嘗試寄出。";error.classList.remove("hidden");return;}if(!isVerifiedTeacher(credential.user)){await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();error.textContent="此帳號未獲老師管理權限。";error.classList.remove("hidden");return;}const ref=classroomRef(),snapshot=await ref.get();if(snapshot.exists){mergeCloudState(snapshot.data());}else{await ref.set({students:appState.students,logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});}await sparkEnsureAccounts();sparkListenTeacherAccounts();closeTeacherPasscodeModal();currentRole="teacher";lockedStudentId=null;document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");switchView("view-teacher-admin");renderTeacherAdmin();listenCloudState();setSyncStatus("老師已登入・雲端同步中",true);showToast("老師登入成功！歡迎回來。","Teacher login successful","👩‍🏫");}catch(e){console.error("Teacher login failed",e);error.textContent="登入失敗，請確認 Email 和密碼是否正確。";error.classList.remove("hidden");}}
 function openPetWizardForEdit(){openPetWizard(true);}
 function openPetWizard(editing){const stu=getLockedStudent();if(!stu)return;wizardState={petId:stu.petId||"fox",conceptZH:stu.conceptZH||"機會成本",conceptEN:stu.conceptEN||"Opportunity Cost",adjZH:stu.adjZH||"精明的",adjEN:stu.adjEN||"Savvy",isEditingExisting:editing};["custom-concept-zh","custom-concept-en","custom-adj-zh","custom-adj-en"].forEach(id=>document.getElementById(id).value="");document.getElementById("btn-cancel-wizard").classList.toggle("hidden",!editing);switchView("view-student-wizard");renderWizardPets();renderWizardChips();updateWizardNamePreview();}
 function cancelWizardToRoom(){switchView("view-student-room");renderStudentRoom();}
@@ -306,7 +306,7 @@ async function bootApplication(){
     const ref=classroomRef(),snap=await ref.get();
     if(!snap.exists)await ref.set({students:appState.students,logs:appState.logs,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     else mergeCloudState(snap.data());
-    await sparkEnsureAccounts();
+    await sparkEnsureAccounts();sparkListenTeacherAccounts();
     currentRole="teacher";document.getElementById("btn-open-teacher").classList.add("hidden");document.getElementById("btn-exit-teacher").classList.remove("hidden");
     switchView("view-teacher-admin");renderTeacherAdmin();setSyncStatus("老師已登入・雲端同步中",true);return;
    }
@@ -345,6 +345,7 @@ async function adminClearAllRecords(){
 }
 async function logoutRole(){
  const wasTeacher=currentRole==="teacher";
+ if(sparkTeacherAccountsUnsubscribe){sparkTeacherAccountsUnsubscribe();sparkTeacherAccountsUnsubscribe=null;}
  if(sparkAccountUnsubscribe){sparkAccountUnsubscribe();sparkAccountUnsubscribe=null;}
  currentRole="landing";lockedStudentId=null;sessionStorage.removeItem(SESSION_LOCK_KEY);localStorage.removeItem(SESSION_LOCK_KEY);
  document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");
@@ -368,6 +369,21 @@ function persistState(){
 
 
 window.addEventListener("DOMContentLoaded",()=>{bootApplication();});
+
+
+let sparkTeacherAccountsUnsubscribe=null;
+function sparkListenTeacherAccounts(){
+ if(sparkTeacherAccountsUnsubscribe)sparkTeacherAccountsUnsubscribe();
+ if(!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ sparkTeacherAccountsUnsubscribe=firestoreDb.collection("studentAccounts").onSnapshot(snapshot=>{
+  let changed=false;
+  snapshot.forEach(doc=>{
+   const data=doc.data(),stu=appState.students.find(x=>x.id===doc.id);
+   if(stu){stu.score=Number(data.earnedScore)||0;stu.spentScore=Number(data.spentScore)||0;changed=true;}
+  });
+  if(changed){saveLocalStateOnly();if(currentRole==="teacher")renderTeacherAdmin();}
+ },error=>{console.error("Teacher account listener failed",error);setSyncStatus("積分即時同步失敗",false);});
+}
 </script>
 </body>
 </html>
