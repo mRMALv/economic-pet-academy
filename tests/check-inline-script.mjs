@@ -48,31 +48,29 @@ if (snapshotSandbox.sparkShouldApplyServerAccountSnapshot({ metadata: { fromCach
 
 // A classroom roster update must not overwrite the active student's balance;
 // the account listener is the single source of truth for these values.
-const mergeFunction = inlineScripts[0].match(/function mergeCloudState\(data\)\{[\s\S]*?\n\}/);
-if (!mergeFunction) {
-  throw new Error("Could not locate mergeCloudState for balance regression check");
+const balanceMergeFunction = inlineScripts[0].match(/function sparkPreserveActiveStudentBalance\(remote,local,role,studentId\)\{[\s\S]*?\n\}/);
+if (!balanceMergeFunction) {
+  throw new Error("Could not locate the active-student balance merge helper");
 }
-const mergeSandbox = {
-  appState: { students: [{ id: "stu-a", name: "Student A", score: 18, spentScore: 3, happiness: 80 }], logs: [] },
-  legacySpendSnapshots: new Map(),
-  currentRole: "student",
-  lockedStudentId: "stu-a",
-  saveLocalStateOnly() {},
-  renderStudentRoom() {},
-  renderLandingRoster() {},
-  renderTeacherAdmin() {},
-  switchView() {}
-};
-vm.runInNewContext(mergeFunction[0], mergeSandbox);
-mergeSandbox.mergeCloudState({
-  students: [{ id: "stu-a", name: "Student A", score: 10, happiness: 40 }],
-  logs: []
-});
-if (mergeSandbox.appState.students[0].score !== 18 || mergeSandbox.appState.students[0].spentScore !== 3) {
+const mergeSandbox = {};
+vm.runInNewContext(balanceMergeFunction[0], mergeSandbox);
+const mergedBalance = mergeSandbox.sparkPreserveActiveStudentBalance(
+  { id: "stu-a", name: "Student A", score: 10 },
+  { id: "stu-a", score: 18, spentScore: 3 },
+  "student",
+  "stu-a"
+);
+if (mergedBalance.score !== 18 || mergedBalance.spentScore !== 3) {
   throw new Error("A classroom roster snapshot rolled back the student's account balance");
 }
-if (mergeSandbox.appState.students[0].happiness !== 80) {
-  throw new Error("Existing pet state should continue to be preserved during roster merge");
+const unchangedBalance = mergeSandbox.sparkPreserveActiveStudentBalance(
+  { id: "stu-b", score: 10 },
+  { id: "stu-b", score: 18, spentScore: 3 },
+  "student",
+  "stu-a"
+);
+if (unchangedBalance.score !== 10 || unchangedBalance.spentScore !== undefined) {
+  throw new Error("A student session must not override another student's roster fields");
 }
 const wishFunction = inlineScripts[0].match(/async function rollNewPetRequest\(\)\{[\s\S]*?\n\}/);
 if (!wishFunction || !/await persistState\(\)/.test(wishFunction[0])) {
