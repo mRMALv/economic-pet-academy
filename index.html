@@ -209,6 +209,7 @@ async function sparkEnsureAccounts(){
    await migrationBatch.commit();
    stu.spentScore=spent;
    stu.legacySpendNeedsReview=needsReview;
+   stu.migrationVersion=1;
    legacySpendSnapshots.delete(stu.id);
   }else{
    const d=snap.data();stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;
@@ -217,6 +218,7 @@ async function sparkEnsureAccounts(){
     await ref.update({migrationVersion:1,legacySpendNeedsReview:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     stu.legacySpendNeedsReview=true;
    }
+   stu.migrationVersion=1;
    legacySpendSnapshots.delete(stu.id);
   }
  }
@@ -232,7 +234,7 @@ async function sparkBindStudent(studentId){
   if(deviceSnap.data().studentId!==studentId)throw new Error("這部裝置已綁定其他帳戶，請聯絡老師");
   const accountSnap=await account.get();
   if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("裝置綁定資料不一致，請聯絡老師");
-  if(accountSnap.data().legacySpendNeedsReview===true)throw new Error("舊積分尚待老師核對，請稍後再登入");
+  if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("舊積分尚待老師核對或初始化，請聯絡老師");
   return accountSnap.data();
  }
  if(!window.confirm("你選擇的是「"+(appState.students.find(x=>x.id===studentId)?.name||"這位學生")+"」。\n\n確認後，這個瀏覽器會綁定到該學生帳戶，之後不能自行切換其他學生；如選錯或換裝置，請聯絡老師解除綁定。\n\n確定要綁定嗎？"))throw new Error("你已取消學生裝置綁定");
@@ -242,6 +244,7 @@ async function sparkBindStudent(studentId){
  await batch.commit();
  const accountSnap=await account.get();
  if(!accountSnap.exists||accountSnap.data().boundUid!==uid)throw new Error("學生帳戶綁定未能確認，請聯絡老師");
+ if(accountSnap.data().migrationVersion!==1||accountSnap.data().legacySpendNeedsReview!==false)throw new Error("舊積分尚待老師核對或初始化，請聯絡老師");
  return accountSnap.data();
 }
 async function sparkSpend(studentId,action,amount,reason){
@@ -358,7 +361,7 @@ async function enterLockedStudentMode(id,silent=false){
  try{
   setSyncStatus("正在確認裝置綁定…",false);
   const account=await sparkBindStudent(id);
-  if(account.legacySpendNeedsReview===true){
+  if(account.migrationVersion!==1||account.legacySpendNeedsReview!==false){
    showToast("這個學生的舊積分尚待老師核對，請聯絡老師。","Legacy points need teacher reconciliation.","⚠️");
    return;
   }
@@ -403,7 +406,7 @@ async function adminAddStudent(){
  if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
  if(classroomMaintenancePending){showToast("班級清理尚未完成，請先重新執行清空","Class cleanup is still pending","⚠️");return;}
  const input=document.getElementById("admin-new-student-name"),name=input.value.trim();if(!name){showToast("請輸入學生姓名！","Please enter student name!","⚠️");return;}
- const stu={id:"stu_"+Date.now(),name:name,petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,spentScore:0,hunger:50,cleanliness:50,happiness:60,habitat:"meadow",wishId:"w5",fulfilledCount:0};
+ const stu={id:"stu_"+Date.now(),name:name,petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,spentScore:0,legacySpendNeedsReview:false,migrationVersion:1,hunger:50,cleanliness:50,happiness:60,habitat:"meadow",wishId:"w5",fulfilledCount:0};
  try{await sparkAccountRef(stu.id).set({studentId:stu.id,earnedScore:0,spentScore:0,boundUid:null,lastTransactionId:null,legacySpendNeedsReview:false,legacySpendOverflow:0,legacySpendSource:"new-student",migrationVersion:1,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});appState.students.push(stu);input.value="";await classroomRef().set({students:sparkPublicRoster(appState.students),logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});renderTeacherAdmin();showToast("已新增學生："+name,"Student added","✅");}
  catch(e){console.error(e);showToast("新增雲端學生帳戶失敗，請重試","Could not create cloud student account","⚠️");}
 }
@@ -525,7 +528,7 @@ async function logoutRole(){
 function sparkPublicRoster(students){
  return (students||[]).map(stu=>{
   const copy={...stu};
-  copy.pointsReady=stu.legacySpendNeedsReview!==true;
+  copy.pointsReady=stu.migrationVersion===1&&stu.legacySpendNeedsReview===false;
   ["spentScore","spendLogs","legacySpendNeedsReview","legacySpendOverflow","legacySpendSource","migrationVersion"].forEach(key=>delete copy[key]);
   return copy;
  });
