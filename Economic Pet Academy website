@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>經濟學萌寵學院 | Economic Pet Academy</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase Realtime Database Compat SDKs (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <!-- Google Fonts: Inter & Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+        }
+        @keyframes petFloat {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-9px) scale(1.02); }
+        }
+        @keyframes petJump {
+            0%, 100% { transform: translateY(0) scale(1, 1); }
+            30% { transform: translateY(-28px) scale(0.95, 1.07); }
+            60% { transform: translateY(0) scale(1.06, 0.93); }
+            80% { transform: translateY(-10px) scale(0.98, 1.02); }
+        }
+        @keyframes petWiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-6deg); }
+            75% { transform: rotate(6deg); }
+        }
+        @keyframes particleRise {
+            0% { opacity: 1; transform: translateY(0) scale(0.7); }
+            100% { opacity: 0; transform: translateY(-90px) scale(1.35); }
+        }
+        .animate-pet-float { animation: petFloat 3s ease-in-out infinite; }
+        .animate-pet-jump { animation: petJump 0.75s ease-in-out; }
+        .animate-pet-wiggle { animation: petWiggle 0.45s ease-in-out 2; }
+        .animate-particle { animation: particleRise 1.2s ease-out forwards; }
+
+        /* Scenic Habitat Themes */
+        .bg-meadow {
+            background: linear-gradient(180deg, #bae6fd 0%, #e0f2fe 52%, #86efac 52%, #4ade80 100%);
+        }
+        .bg-woodroom {
+            background: linear-gradient(180deg, #fef3c7 0%, #fde68a 58%, #d97706 58%, #b45309 100%);
+        }
+        .bg-sakura {
+            background: linear-gradient(180deg, #fce7f3 0%, #fbcfe8 54%, #f9a8d4 54%, #86efac 100%);
+        }
+        .bg-starry {
+            background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 58%, #064e3b 58%, #022c22 100%);
+        }
+        .bg-beach {
+            background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 46%, #0284c7 46%, #0284c7 58%, #fde047 58%, #facc15 100%);
+        }
+    </style>
+</head>
+<body class="bg-amber-50/70 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- =========================================================================
+         TOP NAVIGATION BAR
+    ========================================================================== -->
+    <header class="bg-white/95 backdrop-blur-md border-b border-amber-200/80 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Title -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xl shadow-md">
+                    🐾
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-black tracking-tight text-slate-800 leading-tight">
+                        經濟學萌寵學院 <span class="text-amber-600 hidden sm:inline">| Economic Pet Academy</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-500 font-medium">互動課堂積分養成系統 · Interactive Econ Gamification</p>
+                </div>
+            </div>
+
+            <!-- Right Controls: Cloud Status + Locked Student Pill / Teacher Switcher -->
+            <div class="flex items-center flex-wrap gap-2 sm:gap-3">
+                <!-- Sync Status Pill -->
+                <div id="sync-status-pill" class="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-slate-100 border-slate-200 text-slate-600">
+                    <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span id="sync-text">本機展示模式 Local Demo</span>
+                </div>
+
+                <!-- Locked Student Session Badge (Shown ONLY when logged in as Student - NO switcher!) -->
+                <div id="nav-student-locked" class="hidden items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl">
+                    <span class="text-xs font-black text-emerald-800" id="nav-student-label">🔒 學生：--</span>
+                    <span class="px-2 py-0.5 bg-amber-400 text-amber-950 rounded-full text-xs font-black" id="nav-student-score">0 分</span>
+                    <button onclick="logoutRole()" class="ml-1 px-2.5 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold transition shadow-xs">
+                        登出 Logout
+                    </button>
+                </div>
+
+                <!-- Teacher Admin Badge / Button -->
+                <div id="nav-teacher-controls" class="flex items-center gap-2">
+                    <button id="btn-open-teacher" onclick="openTeacherPasscodeModal()" class="px-3.5 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-extrabold shadow-sm transition flex items-center gap-1.5">
+                        <span>🔐 老師後台</span>
+                        <span class="hidden sm:inline opacity-90">Teacher Admin</span>
+                    </button>
+                    <button id="btn-exit-teacher" onclick="logoutRole()" class="hidden px-3.5 py-2 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-extrabold shadow-sm transition">
+                        🔒 鎖定離開後台 Lock & Exit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- =========================================================================
+         GLOBAL TOAST NOTIFICATION
+    ========================================================================== -->
+    <div id="toast-box" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 max-w-sm">
+        <div class="bg-slate-900/95 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3">
+            <span id="toast-icon" class="text-2xl">✨</span>
+            <div>
+                <p id="toast-zh" class="text-sm font-bold leading-snug"></p>
+                <p id="toast-en" class="text-xs text-slate-300 leading-snug"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         TEACHER PASSCODE MODAL (Default: 8888)
+    ========================================================================== -->
+    <div id="teacher-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-indigo-100">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3">
+                    👩‍🏫
+                </div>
+                <h2 class="text-xl font-black text-slate-800">老師後台密碼驗證</h2>
+                <p class="text-xs text-slate-500 mt-1">Teacher Admin Passcode Required</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-700 mb-1.5">請輸入管理密碼 / Enter Passcode</label>
+                    <input id="teacher-passcode-input" type="password" placeholder="••••"
+                        onkeydown="if(event.key==='Enter') verifyTeacherPasscode()"
+                        class="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-center text-xl font-black tracking-widest">
+                    <p id="teacher-passcode-error" class="hidden text-xs font-bold text-rose-600 text-center mt-2">
+                        ❌ 密碼錯誤，請再試一次！ / Incorrect passcode!
+                    </p>
+                    <p class="text-[11px] text-slate-400 text-center mt-2">預設密碼 Default Passcode: <span class="font-mono font-bold text-slate-600">8888</span></p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                    <button onclick="closeTeacherPasscodeModal()" class="py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition">
+                        取消 Cancel
+                    </button>
+                    <button onclick="verifyTeacherPasscode()" class="py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md transition">
+                        確認進入 Unlock →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         MAIN VIEWPORT CONTAINER
+    ========================================================================== -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- =====================================================================
+             1. LANDING / LOGIN SCREEN (Student Lock Gate vs Teacher Admin)
+        ====================================================================== -->
+        <section id="view-landing" class="max-w-5xl mx-auto">
+            <div class="text-center mb-8">
+                <span class="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold mb-2">
+                    🎓 互動經濟學課堂 · Interactive Economics Classroom
+                </span>
+                <h2 class="text-2xl sm:text-4xl font-black text-slate-800 tracking-tight">
+                    歡迎來到經濟學萌寵學院！
+                    <span class="block text-base sm:text-lg font-bold text-amber-600 mt-1">Welcome to Economic Pet Academy</span>
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto mt-2">
+                    選擇你的身分進入系統。學生登入後將<span class="font-bold text-rose-600">鎖定為個人專屬帳號</span>（無法切換他人）；老師後台需密碼驗證後方可加扣分。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                <!-- Left 8 Cols: Student Login (Roster or New Registration) -->
+                <div class="lg:col-span-8 bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-amber-100 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between flex-wrap gap-2 mb-4 pb-3 border-b border-slate-100">
+                            <div>
+                                <h3 class="text-lg sm:text-xl font-black text-slate-800">🐾 我是學生 · Student Login</h3>
+                                <p class="text-xs text-slate-500">點擊你的名字或輸入學號姓名登入（登入後將鎖定個人畫面）</p>
+                            </div>
+                            <span class="px-3 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-[11px] font-bold">
+                                🔒 防切換鎖定機制已啟用
+                            </span>
+                        </div>
+
+                        <!-- Class Roster Grid -->
+                        <p class="text-xs font-extrabold text-slate-600 mb-2.5">📋 班級名單快速登入 / Select Your Name from Class Roster:</p>
+                        <div id="landing-roster-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1 mb-6">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- New Student Registration -->
+                    <div class="bg-amber-50/80 rounded-2xl p-4 border border-amber-200">
+                        <p class="text-xs font-extrabold text-amber-900 mb-2">✨ 不在名單上？輸入姓名建立新學生帳號 / New Student Sign-Up:</p>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input id="new-student-login-name" type="text" placeholder="請輸入真實姓名 (例如：林小美 Mei Lin)"
+                                onkeydown="if(event.key==='Enter') registerAndLoginStudent()"
+                                class="flex-1 px-4 py-2.5 rounded-xl border border-amber-300 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <button onclick="registerAndLoginStudent()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs sm:text-sm shadow transition shrink-0">
+                                登入並領養寵物 →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right 4 Cols: Teacher Admin Portal Card -->
+                <div class="lg:col-span-4 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-3xl shadow-xl p-6 sm:p-8 text-white flex flex-col justify-between">
+                    <div>
+                        <div class="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-3xl mb-4">
+                            👩‍🏫
+                        </div>
+                        <h3 class="text-xl font-black">老師管理後台</h3>
+                        <p class="text-xs text-indigo-200 font-semibold mt-0.5">Teacher Admin Portal</p>
+                        <ul class="mt-5 space-y-2.5 text-xs text-indigo-100">
+                            <li class="flex items-start gap-2"><span>✅</span><span>根據學生課堂表現快速加扣分或自訂分數與理由</span></li>
+                            <li class="flex items-start gap-2"><span>✅</span><span>全班寵物養成進度與積分排行榜即時監控</span></li>
+                            <li class="flex items-start gap-2"><span>✅</span><span>發送全班或個別寵物隨機挑戰需求</span></li>
+                            <li class="flex items-start gap-2"><span>🔐</span><span>需輸入老師專屬密碼方可進入</span></li>
+                        </ul>
+                    </div>
+
+                    <button onclick="openTeacherPasscodeModal()" class="mt-6 w-full py-3.5 rounded-2xl bg-white text-indigo-700 hover:bg-indigo-50 font-black text-sm shadow-lg transition transform hover:-translate-y-0.5">
+                        🔐 輸入密碼進入老師後台
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             2. STUDENT SETUP WIZARD (Step 1: Choose Chibi Pet, Step 2: Econ Name)
+        ====================================================================== -->
+        <section id="view-student-wizard" class="hidden max-w-6xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-amber-100">
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-5 mb-6 border-b border-slate-100">
+                    <div>
+                        <span class="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">
+                            領養精靈 · Pet Adoption Wizard
+                        </span>
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-800 mt-1.5">
+                            打造你的專屬經濟學萌寵！ <span class="text-sm font-semibold text-slate-500">Create Your Economic Pet</span>
+                        </h2>
+                    </div>
+                    <button id="btn-cancel-wizard" onclick="cancelWizardToRoom()" class="hidden px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                        ← 返回寵物小屋 Back to Room
+                    </button>
+                </div>
+
+                <!-- STEP 1: CHOOSE ONE OF 12 Q-VERSION CHIBI PETS -->
+                <div class="mb-8">
+                    <h3 class="text-base sm:text-lg font-black text-slate-800 mb-1">
+                        第一步：選擇一隻可愛 Q 版寵物 <span class="text-xs font-normal text-slate-500">/ Step 1: Choose a Cute Chibi Pet (12 Species)</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">每種寵物都有獨特的性格（傲嬌、乖巧、貪吃、活潑、佛系、傲氣），會影響牠們與你互動的台詞喔！</p>
+
+                    <div id="wizard-pet-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- STEP 2: ECONOMIC CONCEPT + ADJECTIVE = PET NAME -->
+                <div class="bg-amber-50/70 rounded-3xl p-5 sm:p-6 border border-amber-200/80">
+                    <h3 class="text-base sm:text-lg font-black text-slate-800 mb-1">
+                        第二步：選擇經濟學概念 ＋ 喜歡形容詞 ＝ 寵物名字
+                        <span class="block text-xs font-normal text-slate-500">Step 2: Economic Concept + Favorite Adjective = Pet's Official Name</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                        <!-- Economic Concept Picker -->
+                        <div class="bg-white rounded-2xl p-4 border border-amber-100">
+                            <label class="block text-xs font-black text-indigo-700 mb-2">📚 選擇有興趣的經濟學概念 / Select Economics Concept:</label>
+                            <div id="wizard-concept-chips" class="flex flex-wrap gap-1.5 mb-3">
+                                <!-- Rendered by JS -->
+                            </div>
+                            <div class="pt-2 border-t border-slate-100">
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1">➕ 自行加入其他經濟概念 / Custom Concept (中文 / English):</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input id="custom-concept-zh" type="text" placeholder="中文概念 (如：彈性)" oninput="updateWizardNamePreview()"
+                                        class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-indigo-500">
+                                    <input id="custom-concept-en" type="text" placeholder="English (e.g. Elasticity)" oninput="updateWizardNamePreview()"
+                                        class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-indigo-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Favorite Adjective Picker -->
+                        <div class="bg-white rounded-2xl p-4 border border-amber-100">
+                            <label class="block text-xs font-black text-pink-600 mb-2">✨ 選擇喜歡的形容詞 / Select Favorite Adjective:</label>
+                            <div id="wizard-adj-chips" class="flex flex-wrap gap-1.5 mb-3">
+                                <!-- Rendered by JS -->
+                            </div>
+                            <div class="pt-2 border-t border-slate-100">
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1">➕ 自行加入形容詞 / Custom Adjective (中文 / English):</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input id="custom-adj-zh" type="text" placeholder="中文形容詞 (如：機智的)" oninput="updateWizardNamePreview()"
+                                        class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-pink-500">
+                                    <input id="custom-adj-en" type="text" placeholder="English (e.g. Clever)" oninput="updateWizardNamePreview()"
+                                        class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-pink-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Name Preview & Confirm Button -->
+                    <div class="mt-6 bg-white rounded-2xl p-4 sm:p-5 border-2 border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                            <div id="wizard-preview-avatar" class="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0"></div>
+                            <div>
+                                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">寵物專屬命名預覽 · Official Pet Name Preview</p>
+                                <p id="wizard-preview-name" class="text-lg sm:text-xl font-black text-slate-800 mt-0.5">精明的機會成本 · Savvy Opportunity Cost</p>
+                                <p id="wizard-preview-species" class="text-xs font-bold text-amber-600 mt-0.5"></p>
+                            </div>
+                        </div>
+                        <button onclick="confirmPetAdoption()" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm shadow-lg transition transform hover:-translate-y-0.5">
+                            🎉 確認領養並進入小屋 Adopt Pet →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             3. STUDENT PET CARE DASHBOARD (Score-Gated Actions & Habitat)
+        ====================================================================== -->
+        <section id="view-student-room" class="hidden space-y-6">
+            <!-- Top Info Banner (Strictly NO self-scoring!) -->
+            <div class="bg-amber-100/90 border-l-4 border-amber-500 text-amber-950 px-4 py-3 rounded-2xl shadow-xs flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">📢</span>
+                    <div>
+                        <p class="text-xs sm:text-sm font-extrabold">
+                            積分僅能由老師根據課堂表現加扣分！累積分數解鎖照護：<span class="text-emerald-800">5分餵食</span>、<span class="text-sky-800">10分洗澡</span>、<span class="text-purple-800">15分玩耍</span>。
+                        </p>
+                        <p class="text-[11px] text-amber-800">
+                            Points are strictly awarded by the Teacher! Reach 5 pts to Feed, 10 pts to Bathe, and 15 pts to Play.
+                        </p>
+                    </div>
+                </div>
+                <button onclick="openPetWizardForEdit()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-amber-50 text-amber-800 border border-amber-300 text-xs font-extrabold shadow-xs transition">
+                    ✏️ 更換寵物或名字 Edit Pet
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left 7 Columns: Scenic Habitat Stage, Pet Animation & Care Buttons -->
+                <div class="lg:col-span-7 space-y-5">
+                    <!-- Habitat Background Switcher Bar -->
+                    <div class="bg-white rounded-2xl p-3 shadow-md border border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs font-black text-slate-600 px-2">🏞️ 切換場景 Habitat:</span>
+                        <div id="habitat-buttons" class="flex flex-wrap gap-1.5">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Interactive Pet Stage -->
+                    <div id="pet-stage-bg" class="bg-meadow rounded-3xl shadow-xl p-6 sm:p-8 relative overflow-hidden min-h-[380px] flex flex-col items-center justify-between border-4 border-white transition-all duration-500">
+                        <!-- Decorative Scenery SVG Overlay -->
+                        <div id="habitat-scenery-layer" class="absolute inset-0 pointer-events-none"></div>
+
+                        <!-- Top Stage Header: Pet Name & Personality Pill -->
+                        <div class="relative z-10 w-full flex flex-wrap items-center justify-between gap-2">
+                            <div class="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm border border-white">
+                                <h2 id="room-pet-name" class="text-base sm:text-lg font-black text-slate-800">精明的機會成本 · Savvy Opportunity Cost</h2>
+                                <p id="room-pet-species" class="text-xs font-bold text-amber-600">狐狸 Fox · 傲嬌 Tsundere</p>
+                            </div>
+                            <div class="bg-slate-900/80 backdrop-blur-md text-white px-4 py-2 rounded-2xl shadow-sm text-right">
+                                <p class="text-[10px] uppercase tracking-wider text-amber-300 font-bold">目前課堂積分 Score</p>
+                                <p id="room-score-display" class="text-xl font-black">0 <span class="text-xs font-semibold">分 pts</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Speech Bubble -->
+                        <div class="relative z-10 my-4 max-w-md w-full">
+                            <div class="bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-amber-200 text-center relative">
+                                <p id="pet-speech-zh" class="text-sm sm:text-base font-extrabold text-slate-800 leading-snug">
+                                    主人你好！快在課堂上積極回答問題賺取積分吧！
+                                </p>
+                                <p id="pet-speech-en" class="text-xs font-medium text-slate-500 mt-1 leading-snug">
+                                    Hi Master! Participate in class to earn points for me!
+                                </p>
+                                <div class="w-4 h-4 bg-white border-b-2 border-r-2 border-amber-200 transform rotate-45 mx-auto -mb-6 mt-2"></div>
+                            </div>
+                        </div>
+
+                        <!-- Center Pet Avatar + Floating Particle Layer -->
+                        <div class="relative z-10 flex items-center justify-center my-2">
+                            <div id="particle-container" class="absolute inset-0 pointer-events-none flex items-center justify-center"></div>
+                            <div id="room-pet-avatar" onclick="interactCare('pet')" title="點擊撫摸 Click to Pet"
+                                class="w-44 h-44 sm:w-52 sm:h-52 cursor-pointer animate-pet-float select-none drop-shadow-xl transition-transform">
+                                <!-- Chibi SVG injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 Score-Gated Care Action Buttons -->
+                    <div class="bg-white rounded-3xl shadow-xl p-5 sm:p-6 border border-slate-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm sm:text-base font-black text-slate-800">🎮 萌寵照護互動 <span class="text-xs font-normal text-slate-500">/ Care Interactions</span></h3>
+                            <span class="text-[11px] font-bold text-slate-400">分數達標自動解鎖 · Auto-unlocks at score threshold</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="care-buttons-grid">
+                            <!-- Rendered dynamically by JS based on student's current score -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right 5 Columns: Pet Status Bars, Random Pet Request Card & Recent Score Log -->
+                <div class="lg:col-span-5 space-y-5">
+                    <!-- Pet Status Meters -->
+                    <div class="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                        <h3 class="text-base font-black text-slate-800 mb-4">📊 寵物狀態指標 <span class="text-xs font-normal text-slate-500">/ Pet Status</span></h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-xs font-extrabold mb-1">
+                                    <span class="text-emerald-700">🍙 飽食度 Satiety</span>
+                                    <span id="stat-hunger-text" class="text-slate-700">50%</span>
+                                </div>
+                                <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                                    <div id="stat-hunger-bar" class="h-full bg-gradient-to-r from-emerald-400 to-green-500 rounded-full transition-all duration-500" style="width: 50%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs font-extrabold mb-1">
+                                    <span class="text-sky-700">🫧 清潔度 Cleanliness</span>
+                                    <span id="stat-clean-text" class="text-slate-700">50%</span>
+                                </div>
+                                <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                                    <div id="stat-clean-bar" class="h-full bg-gradient-to-r from-sky-400 to-blue-500 rounded-full transition-all duration-500" style="width: 50%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs font-extrabold mb-1">
+                                    <span class="text-pink-600">💖 心情指數 Happiness</span>
+                                    <span id="stat-happy-text" class="text-slate-700">60%</span>
+                                </div>
+                                <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                                    <div id="stat-happy-bar" class="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500" style="width: 60%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Random Pet Request Card (Unlocked when score >= requiredScore) -->
+                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl shadow-xl p-6 border-2 border-purple-200">
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <span class="px-3 py-1 rounded-full bg-purple-600 text-white text-xs font-black">
+                                💌 寵物隨機心願 · Pet Request
+                            </span>
+                            <button onclick="rollNewPetRequest()" class="text-xs font-bold text-purple-700 hover:text-purple-900 underline">
+                                🔄 換一個心願 New Wish
+                            </button>
+                        </div>
+
+                        <div class="bg-white/90 rounded-2xl p-4 border border-purple-100">
+                            <div class="flex items-start gap-3">
+                                <span id="wish-icon" class="text-3xl shrink-0">🍱</span>
+                                <div class="flex-1">
+                                    <p id="wish-title-zh" class="text-sm font-black text-slate-800">想吃豪華經濟學壽司拼盤</p>
+                                    <p id="wish-title-en" class="text-xs text-slate-500 mt-0.5">Craving Deluxe Economics Sushi Platter</p>
+                                    <div class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 text-xs font-extrabold">
+                                        <span>🎯 達成門檻 Required:</span>
+                                        <span id="wish-req-score">8 分 / pts</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="btn-fulfill-wish" onclick="fulfillPetRequest()"
+                                class="mt-4 w-full py-3 rounded-xl font-black text-xs sm:text-sm transition shadow-sm">
+                                <!-- State controlled by JS -->
+                            </button>
+                        </div>
+
+                        <!-- Fulfilled Badges -->
+                        <div class="mt-3 flex items-center justify-between text-xs text-purple-800 font-bold">
+                            <span>🏆 已完成心願次數 Fulfilled Wishes:</span>
+                            <span id="wish-fulfilled-count" class="px-2.5 py-0.5 bg-purple-200 rounded-full font-black">0 次</span>
+                        </div>
+                    </div>
+
+                    <!-- Student's Score History Feed -->
+                    <div class="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                        <h3 class="text-sm font-black text-slate-800 mb-3">📜 我的老師評分紀錄 <span class="text-xs font-normal text-slate-500">/ My Score Log</span></h3>
+                        <div id="student-score-log" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             4. TEACHER ADMIN DASHBOARD (Passcode Protected: 8888)
+        ====================================================================== -->
+        <section id="view-teacher-admin" class="hidden space-y-6">
+            <!-- Admin Header + Add Student + Broadcast Wish -->
+            <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-indigo-100">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                    <div>
+                        <span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-extrabold">
+                            👩‍🏫 教師專屬管理權限 · Teacher Admin Verified
+                        </span>
+                        <h2 class="text-2xl font-black text-slate-800 mt-2">
+                            課堂表現評分與全班萌寵管理後台
+                            <span class="block text-sm font-semibold text-slate-500 mt-0.5">Classroom Scoring, Custom Adjustments & Pet Requests</span>
+                        </h2>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="triggerClassWideRequest()" class="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow transition">
+                            💌 全班發送隨機寵物心願 Trigger Class Wish
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add New Student Form -->
+                <div class="mt-5 bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <span class="text-xs font-black text-slate-700 shrink-0">➕ 新增學生 Add Student:</span>
+                    <input id="admin-new-student-name" type="text" placeholder="輸入學生姓名 (例如：張志明 Tommy)"
+                        onkeydown="if(event.key==='Enter') adminAddStudent()"
+                        class="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-bold focus:outline-none focus:border-indigo-500">
+                    <button onclick="adminAddStudent()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow transition shrink-0">
+                        加入名單 Add
+                    </button>
+                </div>
+            </div>
+
+            <!-- Students Roster & Scoring Cards -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <!-- Left 8 Columns: Student Cards -->
+                <div class="xl:col-span-8 space-y-4" id="admin-students-list">
+                    <!-- Rendered by JS -->
+                </div>
+
+                <!-- Right 4 Columns: Live Class Score & Activity Log -->
+                <div class="xl:col-span-4">
+                    <div class="bg-white rounded-3xl shadow-xl p-6 border border-slate-100 sticky top-24">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-black text-slate-800">📋 全班即時積分紀錄 <span class="block text-xs font-normal text-slate-500">Live Class Score Log</span></h3>
+                            <span id="admin-total-students" class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-black">6 位學生</span>
+                        </div>
+                        <div id="admin-activity-log" class="space-y-2.5 max-h-[540px] overflow-y-auto pr-1 text-xs">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- =========================================================================
+         APPLICATION LOGIC (Firebase Sync + LocalStorage Fallback + Bilingual Data)
+    ========================================================================== -->
+    <script>
+        // =====================================================================
+        // 🔐 TEACHER PASSCODE (修改此處即可更改老師後台進入密碼，預設為 8888)
+        // =====================================================================
+        const TEACHER_PASSCODE = "8888";
+
+        // =====================================================================
+        // 🔥 FIREBASE REALTIME DATABASE CONFIG (貼上你的 Firebase 金鑰即可跨裝置同步)
+        // 若維持 "YOUR_API_KEY" 佔位符，系統會自動以本機 LocalStorage 展示模式順暢運作
+        // =====================================================================
+        const FIREBASE_CONFIG = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // =====================================================================
+        // 🐾 12 Q-VERSION CHIBI PET SPECIES & PERSONALITY DIALOGUE DATABASE
+        // =====================================================================
+        const PET_SPECIES = [
+            { id: 'alien', nameZH: '三眼仔', nameEN: 'Three-Eyed Alien', personality: 'energetic' },
+            { id: 'totoro', nameZH: '龍貓', nameEN: 'Totoro', personality: 'chill' },
+            { id: 'flyingsquirrel', nameZH: '飛鼠', nameEN: 'Flying Squirrel', personality: 'energetic' },
+            { id: 'fox', nameZH: '狐狸', nameEN: 'Fox', personality: 'tsundere' },
+            { id: 'hedgehog', nameZH: '刺蝟', nameEN: 'Hedgehog', personality: 'tsundere' },
+            { id: 'rabbit', nameZH: '兔子', nameEN: 'Rabbit', personality: 'sweet' },
+            { id: 'hamster', nameZH: '倉鼠', nameEN: 'Hamster', personality: 'foodie' },
+            { id: 'shiba', nameZH: '柴犬', nameEN: 'Shiba Inu', personality: 'sweet' },
+            { id: 'cat', nameZH: '橘貓', nameEN: 'Orange Cat', personality: 'sassy' },
+            { id: 'panda', nameZH: '熊貓', nameEN: 'Panda', personality: 'foodie' },
+            { id: 'penguin', nameZH: '企鵝', nameEN: 'Penguin', personality: 'sweet' },
+            { id: 'capybara', nameZH: '水豚', nameEN: 'Capybara', personality: 'chill' }
+        ];
+
+        const PERSONALITIES = {
+            tsundere: {
+                zh: '傲嬌', en: 'Tsundere', badge: 'bg-rose-100 text-rose-700',
+                petLow: {
+                    zh: '哼！別一直摸我啦，快去舉手答題賺分數買吃的給我！',
+                    en: 'Hmph! Stop petting me and go earn points in class for my food!'
+                },
+                petHigh: {
+                    zh: '勉、勉強讓你摸一下吧…看在你這麼認真賺分的份上！',
+                    en: 'I-I suppose I will let you pet me… since you worked hard for points!'
+                },
+                feed: {
+                    zh: '才不是因為餓了才吃呢！不過…這頓大餐還算合格啦！',
+                    en: 'I-It is not like I was starving! Well… this feast is acceptable!'
+                },
+                bathe: {
+                    zh: '泡泡弄到鼻子了啦！哼，不過洗完香香的心情還不賴～',
+                    en: 'Bubbles got on my nose! Hmph, feeling squeaky clean is nice though~'
+                },
+                play: {
+                    zh: '本寶寶才沒有玩得很開心呢！下次也要拿高分陪我玩喔！',
+                    en: 'I am NOT having tons of fun! Keep scoring high to play with me!'
+                }
+            },
+            sweet: {
+                zh: '乖巧', en: 'Sweet', badge: 'bg-pink-100 text-pink-700',
+                petLow: {
+                    zh: '主人摸摸好溫暖～我們一起努力回答經濟問題賺分吧！',
+                    en: 'Your pats are so warm! Let us earn Econ points together!'
+                },
+                petHigh: {
+                    zh: '最喜歡主人了！主人在課堂上認真的樣子最帥氣～',
+                    en: 'I love you Master! You look amazing when answering questions in class~'
+                },
+                feed: {
+                    zh: '謝謝主人的愛心美食！吃飽飽就有力氣陪主人讀經濟學啦！',
+                    en: 'Thank you for the yummy meal! Now I have energy to study Economics with you!'
+                },
+                bathe: {
+                    zh: '洗得亮晶晶好舒服呀～謝謝主人這麼細心照顧我！',
+                    en: 'All sparkly and clean! Thank you for taking such good care of me!'
+                },
+                play: {
+                    zh: '和主人一起玩耍是世界上最幸福的事！耶～好開心！',
+                    en: 'Playing with you is the happiest thing in the world! Yay~'
+                }
+            },
+            foodie: {
+                zh: '貪吃', en: 'Foodie', badge: 'bg-amber-100 text-amber-800',
+                petLow: {
+                    zh: '肚子餓扁了…摸摸不能當飯吃呀主人，快賺 5 分餵我吧！',
+                    en: 'My tummy is empty… pats do not fill me up! Earn 5 pts to feed me!'
+                },
+                petHigh: {
+                    zh: '呼嚕嚕～摸頭好舒服，順便再賞我一顆經濟學糖果好不好？',
+                    en: 'Purr~ Head pats feel great! Can I also have an Economics treat?'
+                },
+                feed: {
+                    zh: '哇嗚！太美味啦！幸福感邊際效益大爆發！！',
+                    en: 'Nom nom! So delicious! Marginal utility of happiness skyrocketing!!'
+                },
+                bathe: {
+                    zh: '洗香香準備開動下一餐！乾淨的寶寶吃飯最香了～',
+                    en: 'Squeaky clean and ready for the next snack! Clean pets eat best~'
+                },
+                play: {
+                    zh: '跑跑跳跳消耗卡路里，等一下又可以吃更多美食囉！',
+                    en: 'Jumping around burns calories so I can eat even more snacks later!'
+                }
+            },
+            energetic: {
+                zh: '活潑', en: 'Energetic', badge: 'bg-emerald-100 text-emerald-700',
+                petLow: {
+                    zh: '衝呀主人！快舉手搶答賺積分，我們要解鎖超好玩遊戲！',
+                    en: 'Let us go Master! Raise your hand to earn points and unlock games!'
+                },
+                petHigh: {
+                    zh: '能量滿格！主人的積分超高，我們是班上最強拍檔！',
+                    en: 'Full energy! Your score is awesome—we are the top team in class!'
+                },
+                feed: {
+                    zh: '補充能量完畢！現在可以一口氣背十個經濟學定義！',
+                    en: 'Energy recharged! I can memorize ten Econ definitions right now!'
+                },
+                bathe: {
+                    zh: '水花四濺太好玩啦！洗完澡清爽得像飛起來一樣！',
+                    en: 'Splashing water is so fun! Feeling fresh enough to fly!'
+                },
+                play: {
+                    zh: '太刺激啦！最高等級的玩耍時間，幸福指數破表！',
+                    en: 'Woohoo! Ultimate playtime unlocked—happiness off the charts!'
+                }
+            },
+            chill: {
+                zh: '佛系', en: 'Chill', badge: 'bg-teal-100 text-teal-800',
+                petLow: {
+                    zh: '慢慢來不著急…不過如果能賺到 5 分吃頓飯就更完美了～',
+                    en: 'Take it easy… though earning 5 pts for a meal would be quite nice~'
+                },
+                petHigh: {
+                    zh: '歲月靜好～有主人這樣穩健累積積分，真是太安心了。',
+                    en: 'Life is peaceful~ Having a Master who steadily earns points is so relaxing.'
+                },
+                feed: {
+                    zh: '吃飽喝足，達到供需平衡的最高境界了…真香～',
+                    en: 'Full tummy, achieving the ultimate state of Supply & Demand equilibrium~'
+                },
+                bathe: {
+                    zh: '泡個熱水澡，所有的機會成本都隨泡泡飄走了～',
+                    en: 'Taking a warm bath, watching all opportunity costs float away like bubbles~'
+                },
+                play: {
+                    zh: '偶爾跟著主人一起蹦蹦跳跳，心情也跟著陽光起來了呢！',
+                    en: 'Bouncing around with Master makes my mood sunny and bright!'
+                }
+            },
+            sassy: {
+                zh: '傲氣', en: 'Sassy', badge: 'bg-purple-100 text-purple-800',
+                petLow: {
+                    zh: '本喵的毛可不是免費摸的，快賺點分數來進貢！',
+                    en: 'My fur is not free to pet—go earn some points to pay tribute!'
+                },
+                petHigh: {
+                    zh: '不錯嘛，有這麼多積分進貢，本喵就大方讓你摸兩下！',
+                    en: 'Not bad! With that high score, I graciously allow two pats!'
+                },
+                feed: {
+                    zh: '這道佳餚勉強配得上本喵的身分，繼續保持這表現！',
+                    en: 'This cuisine barely matches my royal status—keep up the good work!'
+                },
+                bathe: {
+                    zh: '毛髮柔順閃亮！全班最精緻的萌寵非本喵莫屬！',
+                    en: 'Silky and shiny fur! Clearly the most fabulous pet in class!'
+                },
+                play: {
+                    zh: '既然主人拿到了 15 分，本喵就陪你玩這場 VIP 遊戲吧！',
+                    en: 'Since you reached 15 pts, I shall join you for this VIP playtime!'
+                }
+            }
+        };
+
+        const ECON_CONCEPTS = [
+            { zh: '機會成本', en: 'Opportunity Cost' },
+            { zh: '全成本', en: 'Full Cost' },
+            { zh: '競爭', en: 'Competition' },
+            { zh: '歧視', en: 'Discrimination' },
+            { zh: '免費物品', en: 'Free Goods' },
+            { zh: '經濟物品', en: 'Economic Goods' },
+            { zh: '獨資', en: 'Solo Proprietorship' },
+            { zh: '合夥', en: 'Partnership' }
+        ];
+
+        const ADJECTIVES = [
+            { zh: '暴富的', en: 'Wealthy' },
+            { zh: '精明的', en: 'Savvy' },
+            { zh: '佛系的', en: 'Chill' },
+            { zh: '貪吃的', en: 'Hungry' },
+            { zh: '傲嬌的', en: 'Tsundere' },
+            { zh: '勤奮的', en: 'Diligent' },
+            { zh: '軟萌的', en: 'Fluffy' }
+        ];
+
+        const HABITATS = [
+            { id: 'meadow', css: 'bg-meadow', zh: '陽光草地', en: 'Sunny Meadow', icon: '☀️' },
+            { id: 'woodroom', css: 'bg-woodroom', zh: '溫馨木屋', en: 'Cozy Room', icon: '🏠' },
+            { id: 'sakura', css: 'bg-sakura', zh: '櫻花公園', en: 'Sakura Park', icon: '🌸' },
+            { id: 'starry', css: 'bg-starry', zh: '星空營地', en: 'Starry Camp', icon: '✨' },
+            { id: 'beach', css: 'bg-beach', zh: '陽光海灘', en: 'Tropical Beach', icon: '🏖️' }
+        ];
+
+        const WISH_POOL = [
+            { id: 'w1', icon: '🍱', zh: '想吃豪華經濟學壽司拼盤', en: 'Craving Deluxe Economics Sushi Platter', req: 8 },
+            { id: 'w2', icon: '🌸', zh: '想去櫻花公園野餐喝下午茶', en: 'Wants a Picnic at Cherry Blossom Park', req: 12 },
+            { id: 'w3', icon: '🧮', zh: '想要閃亮亮黃金算盤玩具', en: 'Wants a Shiny Golden Abacus Toy', req: 18 },
+            { id: 'w4', icon: '👑', zh: '想要「經濟學小博士」皇冠', en: 'Wants the "Little Econ PhD" Crown', req: 22 },
+            { id: 'w5', icon: '🍰', zh: '想吃雙層草莓蛋糕', en: 'Craving Double Strawberry Cake', req: 6 },
+            { id: 'w6', icon: '🚀', zh: '想搭火箭去探索宏觀經濟宇宙', en: 'Wants a Rocket Trip to Macroeconomics Space', req: 25 }
+        ];
+
+        // =====================================================================
+        // 🎨 HIGH-DETAIL Q-VERSION CHIBI SVG GENERATOR (12 SPECIES + MOODS)
+        // =====================================================================
+        function getChibiPetSVG(speciesId, mood = 'neutral') {
+            const isHappy = mood === 'happy';
+            const isSad = mood === 'sad';
+
+            // Expressive Chibi Eyes & Mouth based on mood
+            const eyesSVG = isHappy ? `
+                <path d="M 35 53 Q 40 46 45 53" stroke="#1e293b" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+                <path d="M 55 53 Q 60 46 65 53" stroke="#1e293b" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+            ` : isSad ? `
+                <circle cx="40" cy="53" r="4.5" fill="#1e293b"/>
+                <circle cx="60" cy="53" r="4.5" fill="#1e293b"/>
+                <circle cx="38.5" cy="51.5" r="1.5" fill="#ffffff"/>
+                <circle cx="58.5" cy="51.5" r="1.5" fill="#ffffff"/>
+                <path d="M 34 46 L 44 49" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M 66 46 L 56 49" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M 33 58 Q 31 64 34 65 Q 36 64 33 58" fill="#38bdf8"/>
+            ` : `
+                <circle cx="40" cy="52" r="5.2" fill="#1e293b"/>
+                <circle cx="60" cy="52" r="5.2" fill="#1e293b"/>
+                <circle cx="38.2" cy="50" r="2" fill="#ffffff"/>
+                <circle cx="58.2" cy="50" r="2" fill="#ffffff"/>
+                <circle cx="41.5" cy="53.5" r="1" fill="#ffffff"/>
+                <circle cx="61.5" cy="53.5" r="1" fill="#ffffff"/>
+            `;
+
+            const cheeksSVG = `
+                <ellipse cx="30" cy="60" rx="5" ry="3" fill="#fda4af" opacity="0.85"/>
+                <ellipse cx="70" cy="60" rx="5" ry="3" fill="#fda4af" opacity="0.85"/>
+            `;
+
+            const mouthSVG = isHappy ? `
+                <path d="M 45 61 Q 50 69 55 61 Z" fill="#fb7185" stroke="#1e293b" stroke-width="2"/>
+            ` : isSad ? `
+                <path d="M 45 65 Q 50 60 55 65" stroke="#1e293b" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            ` : `
+                <path d="M 45 61 Q 47.5 64.5 50 61 Q 52.5 64.5 55 61" stroke="#1e293b" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            `;
+
+            switch (speciesId) {
+                case 'alien': // 三眼仔 Three-Eyed Alien
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <line x1="50" y1="22" x2="50" y2="10" stroke="#84cc16" stroke-width="4" stroke-linecap="round"/>
+                        <circle cx="50" cy="9" r="5" fill="#a3e635" stroke="#365314" stroke-width="2"/>
+                        <path d="M 22 45 Q 10 38 15 52 Q 20 58 26 55" fill="#a3e635" stroke="#365314" stroke-width="2.5"/>
+                        <path d="M 78 45 Q 90 38 85 52 Q 80 58 74 55" fill="#a3e635" stroke="#365314" stroke-width="2.5"/>
+                        <ellipse cx="50" cy="55" rx="31" ry="28" fill="#a3e635" stroke="#365314" stroke-width="2.5"/>
+                        <path d="M 24 72 Q 50 82 76 72 L 72 86 Q 50 92 28 86 Z" fill="#3b82f6" stroke="#1e3a8a" stroke-width="2.2"/>
+                        <rect x="24" y="70" width="52" height="5" rx="2.5" fill="#7c3aed"/>
+                        <!-- 3 Eyes -->
+                        <circle cx="34" cy="49" r="6.5" fill="#ffffff" stroke="#1e293b" stroke-width="2"/>
+                        <circle cx="50" cy="45" r="6.5" fill="#ffffff" stroke="#1e293b" stroke-width="2"/>
+                        <circle cx="66" cy="49" r="6.5" fill="#ffffff" stroke="#1e293b" stroke-width="2"/>
+                        <circle cx="34" cy="49" r="3" fill="#1e293b"/>
+                        <circle cx="50" cy="45" r="3" fill="#1e293b"/>
+                        <circle cx="66" cy="49" r="3" fill="#1e293b"/>
+                        ${cheeksSVG}
+                        ${mouthSVG}
+                    </svg>`;
+
+                case 'totoro': // 龍貓 Totoro
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <path d="M 33 28 L 30 9 L 41 25 Z" fill="#94a3b8" stroke="#334155" stroke-width="2.5" stroke-linejoin="round"/>
+                        <path d="M 67 28 L 70 9 L 59 25 Z" fill="#94a3b8" stroke="#334155" stroke-width="2.5" stroke-linejoin="round"/>
+                        <ellipse cx="50" cy="58" rx="33" ry="31" fill="#94a3b8" stroke="#334155" stroke-width="2.5"/>
+                        <ellipse cx="50" cy="66" rx="23" ry="19" fill="#f8fafc"/>
+                        <path d="M 38 60 L 41 57 L 44 60 M 47 59 L 50 56 L 53 59 M 56 60 L 59 57 L 62 60" stroke="#64748b" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                        <line x1="14" y1="54" x2="26" y2="55" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="14" y1="60" x2="26" y2="59" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="86" y1="54" x2="74" y2="55" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="86" y1="60" x2="74" y2="59" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+                        <ellipse cx="50" cy="54" rx="3.5" ry="2" fill="#334155"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'flyingsquirrel': // 飛鼠 Flying Squirrel
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <path d="M 15 62 Q 12 45 28 48 L 72 48 Q 88 45 85 62 Q 72 82 50 82 Q 28 82 15 62 Z" fill="#fde68a" stroke="#92400e" stroke-width="2.2"/>
+                        <circle cx="30" cy="30" r="10" fill="#d97706" stroke="#78350f" stroke-width="2.5"/>
+                        <circle cx="70" cy="30" r="10" fill="#d97706" stroke="#78350f" stroke-width="2.5"/>
+                        <circle cx="30" cy="30" r="5" fill="#fef3c7"/>
+                        <circle cx="70" cy="30" r="5" fill="#fef3c7"/>
+                        <ellipse cx="50" cy="55" rx="28" ry="26" fill="#f59e0b" stroke="#78350f" stroke-width="2.5"/>
+                        <ellipse cx="50" cy="61" rx="20" ry="17" fill="#fffbeb"/>
+                        <path d="M 50 29 L 50 42" stroke="#78350f" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="50" cy="56" r="2.8" fill="#78350f"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'fox': // 狐狸 Fox
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <path d="M 22 44 L 18 14 L 42 32 Z" fill="#f97316" stroke="#7c2d12" stroke-width="2.5" stroke-linejoin="round"/>
+                        <path d="M 78 44 L 82 14 L 58 32 Z" fill="#f97316" stroke="#7c2d12" stroke-width="2.5" stroke-linejoin="round"/>
+                        <path d="M 24 38 L 22 20 L 36 31 Z" fill="#fff7ed"/>
+                        <path d="M 76 38 L 78 20 L 64 31 Z" fill="#fff7ed"/>
+                        <ellipse cx="50" cy="56" rx="30" ry="27" fill="#f97316" stroke="#7c2d12" stroke-width="2.5"/>
+                        <path d="M 20 56 Q 35 55 50 64 Q 65 55 80 56 Q 76 83 50 83 Q 24 83 20 56 Z" fill="#ffffff"/>
+                        <ellipse cx="50" cy="57" rx="3.5" ry="2.5" fill="#1e293b"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'hedgehog': // 刺蝟 Hedgehog
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <path d="M 18 55 L 14 42 L 24 36 L 24 22 L 37 22 L 44 12 L 56 12 L 63 22 L 76 22 L 76 36 L 86 42 L 82 55 Z" fill="#78350f" stroke="#451a03" stroke-width="2.5" stroke-linejoin="round"/>
+                        <ellipse cx="50" cy="58" rx="29" ry="26" fill="#fde68a" stroke="#78350f" stroke-width="2.5"/>
+                        <ellipse cx="50" cy="57" rx="3.8" ry="2.8" fill="#451a03"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'rabbit': // 兔子 Rabbit
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <ellipse cx="37" cy="24" rx="7.5" ry="20" fill="#ffffff" stroke="#94a3b8" stroke-width="2.5"/>
+                        <ellipse cx="63" cy="24" rx="7.5" ry="20" fill="#ffffff" stroke="#94a3b8" stroke-width="2.5"/>
+                        <ellipse cx="37" cy="24" rx="3.8" ry="14" fill="#fbcfe8"/>
+                        <ellipse cx="63" cy="24" rx="3.8" ry="14" fill="#fbcfe8"/>
+                        <ellipse cx="50" cy="60" rx="30" ry="26" fill="#ffffff" stroke="#94a3b8" stroke-width="2.5"/>
+                        <path d="M 47 57 L 53 57 L 50 60 Z" fill="#f472b6"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'hamster': // 倉鼠 Hamster
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="28" cy="33" r="9" fill="#fbbf24" stroke="#92400e" stroke-width="2.5"/>
+                        <circle cx="72" cy="33" r="9" fill="#fbbf24" stroke="#92400e" stroke-width="2.5"/>
+                        <circle cx="28" cy="33" r="4.5" fill="#fbcfe8"/>
+                        <circle cx="72" cy="33" r="4.5" fill="#fbcfe8"/>
+                        <path d="M 20 56 C 20 32, 80 32, 80 56 C 85 74, 72 85, 50 85 C 28 85, 15 74, 20 56 Z" fill="#fcd34d" stroke="#92400e" stroke-width="2.5"/>
+                        <ellipse cx="50" cy="64" rx="22" ry="17" fill="#ffffff"/>
+                        <ellipse cx="50" cy="56" rx="3" ry="2" fill="#f472b6"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'shiba': // 柴犬 Shiba Inu
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <path d="M 22 42 L 22 16 L 41 31 Z" fill="#f59e0b" stroke="#78350f" stroke-width="2.5" stroke-linejoin="round"/>
+                        <path d="M 78 42 L 78 16 L 59 31 Z" fill="#f59e0b" stroke="#78350f" stroke-width="2.5" stroke-linejoin="round"/>
+                        <ellipse cx="50" cy="57" rx="30" ry="27" fill="#f59e0b" stroke="#78350f" stroke-width="2.5"/>
+                        <ellipse cx="39" cy="43" rx="3.5" ry="2.2" fill="#ffffff"/>
+                        <ellipse cx="61" cy="43" rx="3.5" ry="2.2" fill="#ffffff"/>
+                        <path d="M 21 57 Q 36 55 50 62 Q 64 55 79 57 Q 75 83 50 83 Q 25 83 21 57 Z" fill="#ffffff"/>
+                        <ellipse cx="50" cy="57" rx="4" ry="2.8" fill="#1e293b"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'cat': // 橘貓 Orange Cat
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <path d="M 21 44 L 20 16 L 42 32 Z" fill="#fb923c" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
+                        <path d="M 79 44 L 80 16 L 58 32 Z" fill="#fb923c" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
+                        <ellipse cx="50" cy="57" rx="30" ry="26" fill="#fdba74" stroke="#9a3412" stroke-width="2.5"/>
+                        <path d="M 45 31 L 45 39 M 50 30 L 50 40 M 55 31 L 55 39" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="14" y1="54" x2="25" y2="56" stroke="#9a3412" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="14" y1="61" x2="25" y2="60" stroke="#9a3412" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="86" y1="54" x2="75" y2="56" stroke="#9a3412" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="86" y1="61" x2="75" y2="60" stroke="#9a3412" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M 47 56 L 53 56 L 50 59 Z" fill="#f43f5e"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'panda': // 熊貓 Panda
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="26" cy="29" r="10" fill="#1e293b"/>
+                        <circle cx="74" cy="29" r="10" fill="#1e293b"/>
+                        <ellipse cx="50" cy="56" rx="31" ry="27" fill="#ffffff" stroke="#1e293b" stroke-width="2.5"/>
+                        <ellipse cx="38" cy="52" rx="8.5" ry="6.5" transform="rotate(-18 38 52)" fill="#1e293b"/>
+                        <ellipse cx="62" cy="52" rx="8.5" ry="6.5" transform="rotate(18 62 52)" fill="#1e293b"/>
+                        <circle cx="39" cy="51" r="2.8" fill="#ffffff"/>
+                        <circle cx="61" cy="51" r="2.8" fill="#ffffff"/>
+                        <ellipse cx="50" cy="58" rx="4" ry="2.6" fill="#1e293b"/>
+                        ${cheeksSVG}${mouthSVG}
+                    </svg>`;
+
+                case 'penguin': // 企鵝 Penguin
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <ellipse cx="21" cy="60" rx="6" ry="14" transform="rotate(15 21 60)" fill="#334155"/>
+                        <ellipse cx="79" cy="60" rx="6" ry="14" transform="rotate(-15 79 60)" fill="#334155"/>
+                        <ellipse cx="50" cy="55" rx="29" ry="31" fill="#334155" stroke="#0f172a" stroke-width="2.5"/>
+                        <path d="M 27 56 C 27 42, 46 42, 50 50 C 54 42, 73 42, 73 56 C 73 76, 62 83, 50 83 C 38 83, 27 76, 27 56 Z" fill="#ffffff"/>
+                        <ellipse cx="50" cy="58" rx="6.5" ry="4" fill="#fbbf24" stroke="#b45309" stroke-width="2"/>
+                        ${eyesSVG}${cheeksSVG}
+                    </svg>`;
+
+                case 'capybara': // 水豚 Capybara
+                default:
+                    return `<svg viewBox="0 0 100 100" class="w-full h-full">
+                        <circle cx="27" cy="34" r="7.5" fill="#92400e" stroke="#451a03" stroke-width="2.2"/>
+                        <circle cx="73" cy="34" r="7.5" fill="#92400e" stroke="#451a03" stroke-width="2.2"/>
+                        <rect x="20" y="30" width="60" height="52" rx="26" fill="#b45309" stroke="#451a03" stroke-width="2.5"/>
+                        <ellipse cx="50" cy="62" rx="18" ry="13" fill="#92400e"/>
+                        <!-- Tangerine on head! -->
+                        <circle cx="50" cy="23" r="7" fill="#f97316" stroke="#9a3412" stroke-width="1.8"/>
+                        <path d="M 50 16 Q 55 12 57 16 Q 53 18 50 16 Z" fill="#22c55e"/>
+                        <circle cx="45" cy="58" r="2" fill="#451a03"/>
+                        <circle cx="55" cy="58" r="2" fill="#451a03"/>
+                        ${eyesSVG}${cheeksSVG}${mouthSVG}
+                    </svg>`;
+            }
+        }
+
+        function getHabitatScenerySVG(habitatId) {
+            switch (habitatId) {
+                case 'meadow':
+                    return `<svg viewBox="0 0 400 200" class="w-full h-full opacity-80">
+                        <circle cx="345" cy="38" r="22" fill="#fde047"/>
+                        <path d="M 40 45 Q 55 30 70 45 Q 85 35 95 48 L 30 48 Z" fill="#ffffff"/>
+                        <path d="M 180 32 Q 195 18 212 32 Q 226 22 236 35 L 170 35 Z" fill="#ffffff"/>
+                        <circle cx="55" cy="175" r="4" fill="#f43f5e"/><circle cx="62" cy="178" r="3" fill="#fde047"/>
+                        <circle cx="330" cy="172" r="4" fill="#a855f7"/><circle cx="322" cy="176" r="3" fill="#ffffff"/>
+                    </svg>`;
+                case 'sakura':
+                    return `<svg viewBox="0 0 400 200" class="w-full h-full opacity-85">
+                        <circle cx="45" cy="35" r="35" fill="#f472b6" opacity="0.5"/>
+                        <circle cx="355" cy="40" r="40" fill="#f472b6" opacity="0.5"/>
+                        <circle cx="120" cy="65" r="3" fill="#f43f5e"/><circle cx="270" cy="80" r="3.5" fill="#f43f5e"/>
+                        <circle cx="95" cy="120" r="3" fill="#ec4899"/><circle cx="310" cy="130" r="3" fill="#ec4899"/>
+                    </svg>`;
+                case 'starry':
+                    return `<svg viewBox="0 0 400 200" class="w-full h-full opacity-90">
+                        <circle cx="340" cy="38" r="18" fill="#fef08a"/>
+                        <circle cx="60" cy="30" r="2" fill="#ffffff"/><circle cx="130" cy="50" r="2.5" fill="#fde047"/>
+                        <circle cx="220" cy="25" r="2" fill="#ffffff"/><circle cx="280" cy="60" r="2" fill="#bae6fd"/>
+                        <circle cx="90" cy="85" r="1.8" fill="#ffffff"/><circle cx="180" cy="75" r="2" fill="#fef08a"/>
+                    </svg>`;
+                case 'beach':
+                    return `<svg viewBox="0 0 400 200" class="w-full h-full opacity-85">
+                        <circle cx="60" cy="35" r="20" fill="#fde047"/>
+                        <path d="M 0 112 Q 50 106 100 112 T 200 112 T 300 112 T 400 112" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+                    </svg>`;
+                default:
+                    return `<svg viewBox="0 0 400 200" class="w-full h-full opacity-60">
+                        <rect x="45" y="25" width="75" height="55" rx="8" fill="#e0f2fe" stroke="#92400e" stroke-width="4"/>
+                        <line x1="82" y1="25" x2="82" y2="80" stroke="#92400e" stroke-width="3"/>
+                        <line x1="45" y1="52" x2="120" y2="52" stroke="#92400e" stroke-width="3"/>
+                    </svg>`;
+            }
+        }
+
+        // =====================================================================
+        // 💾 APPLICATION STATE & INITIAL CLASSROOM DATA
+        // =====================================================================
+        const STORAGE_KEY = "econPetAcademy_v5_data";
+        const SESSION_LOCK_KEY = "econPetAcademy_lockedStudentId";
+
+        let appState = {
+            students: [
+                {
+                    id: "stu_1",
+                    name: "陳大文 Chan Tai Man",
+                    petCreated: false,
+                    petId: null,
+                    conceptZH: "",
+                    conceptEN: "",
+                    adjZH: "",
+                    adjEN: "",
+                    score: 0,
+                    hunger: 50,
+                    cleanliness: 50,
+                    happiness: 50,
+                    habitat: "meadow",
+                    wishId: "w2",
+                    fulfilledCount: 0
+                },
+                {
+                    id: "stu_2",
+                    name: "李小思 Chloe Lee",
+                    petCreated: false,
+                    petId: null,
+                    conceptZH: "",
+                    conceptEN: "",
+                    adjZH: "",
+                    adjEN: "",
+                    score: 0,
+                    hunger: 50,
+                    cleanliness: 50,
+                    happiness: 50,
+                    habitat: "sakura",
+                    wishId: "w1",
+                    fulfilledCount: 0
+                }
+            ],
+            logs: []
+        };
+
+        let currentRole = "landing"; // "landing" | "student" | "teacher"
+        let lockedStudentId = null;
+        let firebaseDbRef = null;
+        let isFirebaseSynced = false;
+
+        // Wizard temporary selection state
+        let wizardState = {
+            petId: "fox",
+            conceptZH: "機會成本",
+            conceptEN: "Opportunity Cost",
+            adjZH: "精明的",
+            adjEN: "Savvy",
+            isEditingExisting: false
+        };
+
+        // =====================================================================
+        // 🚀 INITIALIZATION & FIREBASE / LOCALSTORAGE SYNC
+        // =====================================================================
+        window.addEventListener("DOMContentLoaded", () => {
+            loadLocalData();
+            populateAdminPetDropdown();
+            initFirebaseIfConfigured();
+
+            // Check if this browser has a locked student session
+            const savedStudentId = sessionStorage.getItem(SESSION_LOCK_KEY) || localStorage.getItem(SESSION_LOCK_KEY);
+            if (savedStudentId && appState.students.some(s => s.id === savedStudentId)) {
+                enterLockedStudentMode(savedStudentId, true);
+            } else {
+                renderLandingRoster();
+            }
+
+            // Cross-tab LocalStorage real-time sync
+            window.addEventListener("storage", (e) => {
+                if (e.key === STORAGE_KEY && e.newValue) {
+                    try {
+                        appState = JSON.parse(e.newValue);
+                        refreshCurrentView();
+                    } catch (err) {}
+                }
+            });
+        });
+
+        function loadLocalData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && Array.isArray(parsed.students)) {
+                        appState = parsed;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        function persistState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            if (firebaseDbRef) {
+                firebaseDbRef.set(appState).catch(err => console.warn("Firebase write error:", err));
+            }
+        }
+
+        function initFirebaseIfConfigured() {
+            const validConfig = (
+                typeof firebase !== "undefined" &&
+                FIREBASE_CONFIG &&
+                FIREBASE_CONFIG.apiKey &&
+                FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY" &&
+                FIREBASE_CONFIG.databaseURL &&
+                !FIREBASE_CONFIG.databaseURL.includes("YOUR_PROJECT_ID")
+            );
+
+            if (!validConfig) return;
+
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                firebaseDbRef = firebase.database().ref("econPetAcademyClassroom");
+                firebaseDbRef.on("value", (snapshot) => {
+                    isFirebaseSynced = true;
+                    updateSyncPill(true);
+                    const remote = snapshot.val();
+                    if (remote && remote.students) {
+                        appState.students = Array.isArray(remote.students) ? remote.students : Object.values(remote.students);
+                        appState.logs = remote.logs ? (Array.isArray(remote.logs) ? remote.logs : Object.values(remote.logs)) : [];
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                        refreshCurrentView();
+                    } else {
+                        persistState();
+                    }
+                });
+            } catch (e) {
+                console.warn("Firebase fallback to LocalStorage:", e);
+            }
+        }
+
+        function updateSyncPill(online) {
+            const dot = document.getElementById("sync-dot");
+            const txt = document.getElementById("sync-text");
+            const pill = document.getElementById("sync-status-pill");
+            if (online) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                txt.textContent = "Firebase 雲端即時同步 Cloud Synced";
+                pill.className = "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-50 border-emerald-200 text-emerald-700";
+            }
+        }
+
+        function refreshCurrentView() {
+            if (currentRole === "landing") {
+                renderLandingRoster();
+            } else if (currentRole === "student" && lockedStudentId) {
+                const stu = getLockedStudent();
+                if (!stu) {
+                    logoutRole();
+                    return;
+                }
+                updateTopNavForStudent(stu);
+                if (!document.getElementById("view-student-room").classList.contains("hidden")) {
+                    renderStudentRoom();
+                }
+            } else if (currentRole === "teacher") {
+                renderTeacherAdmin();
+            }
+        }
+
+        // =====================================================================
+        // 🔒 STRICT STUDENT LOCK & TEACHER PASSCODE NAVIGATION
+        // =====================================================================
+        function switchView(viewId) {
+            ["view-landing", "view-student-wizard", "view-student-room", "view-teacher-admin"].forEach(id => {
+                document.getElementById(id).classList.add("hidden");
+            });
+            document.getElementById(viewId).classList.remove("hidden");
+        }
+
+        function renderLandingRoster() {
+            const grid = document.getElementById("landing-roster-grid");
+            grid.innerHTML = appState.students.map(stu => {
+                const petInfo = stu.petCreated ? PET_SPECIES.find(p => p.id === stu.petId) : null;
+                const petIcon = stu.petCreated ? getChibiPetSVG(stu.petId, stu.score >= 5 ? 'happy' : 'neutral') : '<div class="text-3xl text-center mt-1">🥚</div>';
+                const fullName = stu.petCreated ? `${stu.adjZH}${stu.conceptZH}` : "尚未領養寵物 Not Adopted Yet";
+                const speciesText = stu.petCreated ? `(${petInfo?.nameZH || ''})` : "";
+                
+                return `
+                    <button onclick="enterLockedStudentMode('${stu.id}', false)"
+                        class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-400 transition text-left group shadow-2xs">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-11 h-11 rounded-xl bg-white border border-slate-200 p-1 shrink-0 flex items-center justify-center">
+                                ${petIcon}
+                            </div>
+                            <div class="truncate">
+                                <p class="text-sm font-black text-slate-800 group-hover:text-amber-700 truncate">${escapeHTML(stu.name)}</p>
+                                <p class="text-[11px] text-slate-500 truncate">${escapeHTML(fullName)} ${speciesText}</p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black shrink-0 ml-2">
+                            ${stu.score} 分
+                        </span>
+                    </button>
+                `;
+            }).join("");
+        }
+
+        function registerAndLoginStudent() {
+            const input = document.getElementById("new-student-login-name");
+            const name = input.value.trim();
+            if (!name) {
+                showToast("請輸入你的真實姓名！", "Please enter your name first!", "⚠️");
+                return;
+            }
+            const newId = "stu_" + Date.now();
+            appState.students.push({
+                id: newId,
+                name: name,
+                petCreated: false,
+                petId: null,
+                conceptZH: "",
+                conceptEN: "",
+                adjZH: "",
+                adjEN: "",
+                score: 0,
+                hunger: 50,
+                cleanliness: 50,
+                happiness: 50,
+                habitat: "meadow",
+                wishId: "w5",
+                fulfilledCount: 0
+            });
+            input.value = "";
+            persistState();
+            enterLockedStudentMode(newId, false);
+        }
+
+        function enterLockedStudentMode(studentId, silent = false) {
+            const stu = appState.students.find(s => s.id === studentId);
+            if (!stu) return;
+
+            currentRole = "student";
+            lockedStudentId = studentId;
+            sessionStorage.setItem(SESSION_LOCK_KEY, studentId);
+            localStorage.setItem(SESSION_LOCK_KEY, studentId);
+
+            // Lock top bar to ONLY this student (no dropdown switcher)
+            updateTopNavForStudent(stu);
+            document.getElementById("nav-student-locked").classList.remove("hidden");
+            document.getElementById("nav-student-locked").classList.add("flex");
+            document.getElementById("btn-open-teacher").classList.remove("hidden");
+            document.getElementById("btn-exit-teacher").classList.add("hidden");
+
+            if (!silent) {
+                showToast(`已鎖定學生帳號：${stu.name}`, `Locked to Student: ${stu.name}`, "🔒");
+            }
+
+            if (!stu.petCreated) {
+                openPetWizard(false);
+            } else {
+                switchView("view-student-room");
+                renderStudentRoom();
+            }
+        }
+
+        function updateTopNavForStudent(stu) {
+            document.getElementById("nav-student-label").textContent = `🔒 學生：${stu.name}`;
+            document.getElementById("nav-student-score").textContent = `${stu.score} 分 / pts`;
+        }
+
+        function logoutRole() {
+            currentRole = "landing";
+            lockedStudentId = null;
+            sessionStorage.removeItem(SESSION_LOCK_KEY);
+            localStorage.removeItem(SESSION_LOCK_KEY);
+
+            document.getElementById("nav-student-locked").classList.add("hidden");
+            document.getElementById("nav-student-locked").classList.remove("flex");
+            document.getElementById("btn-open-teacher").classList.remove("hidden");
+            document.getElementById("btn-exit-teacher").classList.add("hidden");
+
+            switchView("view-landing");
+            renderLandingRoster();
+            showToast("已登出並解除帳號鎖定", "Logged out successfully", "👋");
+        }
+
+        // Teacher Passcode Modal & Auth
+        function openTeacherPasscodeModal() {
+            const modal = document.getElementById("teacher-modal");
+            const input = document.getElementById("teacher-passcode-input");
+            const err = document.getElementById("teacher-passcode-error");
+            input.value = "";
+            err.classList.add("hidden");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function closeTeacherPasscodeModal() {
+            const modal = document.getElementById("teacher-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function verifyTeacherPasscode() {
+            const val = document.getElementById("teacher-passcode-input").value.trim();
+            if (val === TEACHER_PASSCODE) {
+                closeTeacherPasscodeModal();
+                currentRole = "teacher";
+                lockedStudentId = null;
+                document.getElementById("nav-student-locked").classList.add("hidden");
+                document.getElementById("nav-student-locked").classList.remove("flex");
+                document.getElementById("btn-open-teacher").classList.add("hidden");
+                document.getElementById("btn-exit-teacher").classList.remove("hidden");
+
+                switchView("view-teacher-admin");
+                renderTeacherAdmin();
+                showToast("密碼驗證通過，歡迎進入老師後台！", "Teacher Admin Unlocked!", "👩‍🏫");
+            } else {
+                document.getElementById("teacher-passcode-error").classList.remove("hidden");
+            }
+        }
+
+        function getLockedStudent() {
+            return appState.students.find(s => s.id === lockedStudentId);
+        }
+
+        // =====================================================================
+        // 🐾 STEP 1 & 2: PET CREATION WIZARD
+        // =====================================================================
+        function openPetWizardForEdit() {
+            openPetWizard(true);
+        }
+
+        function openPetWizard(isEditing) {
+            const stu = getLockedStudent();
+            if (!stu) return;
+
+            wizardState = {
+                petId: stu.petId || "alien",
+                conceptZH: stu.conceptZH || "",
+                conceptEN: stu.conceptEN || "",
+                adjZH: stu.adjZH || "",
+                adjEN: stu.adjEN || "",
+                isEditingExisting: isEditing
+            };
+
+            document.getElementById("custom-concept-zh").value = "";
+            document.getElementById("custom-concept-en").value = "";
+            document.getElementById("custom-adj-zh").value = "";
+            document.getElementById("custom-adj-en").value = "";
+
+            const cancelBtn = document.getElementById("btn-cancel-wizard");
+            if (isEditing) cancelBtn.classList.remove("hidden");
+            else cancelBtn.classList.add("hidden");
+
+            switchView("view-student-wizard");
+            renderWizardPets();
+            renderWizardChips();
+            updateWizardNamePreview();
+        }
+
+        function cancelWizardToRoom() {
+            switchView("view-student-room");
+            renderStudentRoom();
+        }
+
+        function renderWizardPets() {
+            const grid = document.getElementById("wizard-pet-grid");
+            grid.innerHTML = PET_SPECIES.map(pet => {
+                const selected = wizardState.petId === pet.id;
+                const pInfo = PERSONALITIES[pet.personality];
+                return `
+                    <button type="button" onclick="selectWizardPet('${pet.id}')"
+                        class="p-3 rounded-2xl border-2 transition text-center flex flex-col items-center ${selected ? 'border-amber-500 bg-amber-50 shadow-md scale-[1.02]' : 'border-slate-200 bg-white hover:border-amber-300'}">
+                        <div class="w-16 h-16 mb-1.5">${getChibiPetSVG(pet.id, selected ? 'happy' : 'neutral')}</div>
+                        <p class="text-xs font-black text-slate-800">${pet.nameZH}</p>
+                        <p class="text-[10px] font-semibold text-slate-500 mb-1">${pet.nameEN}</p>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${pInfo.badge}">
+                            ${pInfo.zh} ${pInfo.en}
+                        </span>
+                    </button>
+                `;
+            }).join("");
+        }
+
+        function selectWizardPet(petId) {
+            wizardState.petId = petId;
+            renderWizardPets();
+            updateWizardNamePreview();
+        }
+
+        function renderWizardChips() {
+            const cBox = document.getElementById("wizard-concept-chips");
+            cBox.innerHTML = ECON_CONCEPTS.map(c => {
+                const active = wizardState.conceptZH === c.zh && !document.getElementById("custom-concept-zh").value.trim();
+                return `
+                    <button type="button" onclick="selectWizardConcept('${c.zh}', '${c.en}')"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${active ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-400'}">
+                        ${c.zh} <span class="opacity-80 text-[10px]">${c.en}</span>
+                    </button>
+                `;
+            }).join("");
+
+            const aBox = document.getElementById("wizard-adj-chips");
+            aBox.innerHTML = ADJECTIVES.map(a => {
+                const active = wizardState.adjZH === a.zh && !document.getElementById("custom-adj-zh").value.trim();
+                return `
+                    <button type="button" onclick="selectWizardAdj('${a.zh}', '${a.en}')"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${active ? 'bg-pink-600 text-white border-pink-600 shadow-xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-pink-400'}">
+                        ${a.zh} <span class="opacity-80 text-[10px]">${a.en}</span>
+                    </button>
+                `;
+            }).join("");
+        }
+
+        function selectWizardConcept(zh, en) {
+            document.getElementById("custom-concept-zh").value = "";
+            document.getElementById("custom-concept-en").value = "";
+            wizardState.conceptZH = zh;
+            wizardState.conceptEN = en;
+            renderWizardChips();
+            updateWizardNamePreview();
+        }
+
+        function selectWizardAdj(zh, en) {
+            document.getElementById("custom-adj-zh").value = "";
+            document.getElementById("custom-adj-en").value = "";
+            wizardState.adjZH = zh;
+            wizardState.adjEN = en;
+            renderWizardChips();
+            updateWizardNamePreview();
+        }
+
+        function getResolvedWizardName() {
+            const cZH = document.getElementById("custom-concept-zh").value.trim() || wizardState.conceptZH || "未命名概念";
+            const cEN = document.getElementById("custom-concept-en").value.trim() || (document.getElementById("custom-concept-zh").value.trim() ? cZH : (wizardState.conceptEN || "Unnamed Concept"));
+            const aZH = document.getElementById("custom-adj-zh").value.trim() || wizardState.adjZH || "可愛的";
+            const aEN = document.getElementById("custom-adj-en").value.trim() || (document.getElementById("custom-adj-zh").value.trim() ? aZH : (wizardState.adjEN || "Cute"));
+            return { cZH, cEN, aZH, aEN };
+        }
+
+        function updateWizardNamePreview() {
+            const { cZH, cEN, aZH, aEN } = getResolvedWizardName();
+            const pet = PET_SPECIES.find(p => p.id === wizardState.petId) || PET_SPECIES[0];
+            const pInfo = PERSONALITIES[pet.personality];
+
+            document.getElementById("wizard-preview-avatar").innerHTML = getChibiPetSVG(pet.id, "happy");
+            document.getElementById("wizard-preview-name").textContent = `${aZH}${cZH} · ${aEN} ${cEN}`;
+            document.getElementById("wizard-preview-species").textContent = `${pet.nameZH} ${pet.nameEN} · 性格：${pInfo.zh} (${pInfo.en})`;
+        }
+
+        function confirmPetAdoption() {
+            const stu = getLockedStudent();
+            if (!stu) return;
+            const { cZH, cEN, aZH, aEN } = getResolvedWizardName();
+
+            stu.petCreated = true;
+            stu.petId = wizardState.petId;
+            stu.conceptZH = cZH;
+            stu.conceptEN = cEN;
+            stu.adjZH = aZH;
+            stu.adjEN = aEN;
+
+            persistState();
+            switchView("view-student-room");
+            renderStudentRoom();
+            showToast(`恭喜領養「${aZH}${cZH}」！`, `Adopted ${aEN} ${cEN}!`, "🎉");
+        }
+
+        // =====================================================================
+        // 🏡 STEP 3: STUDENT PET CARE ROOM (Score-Gated Actions & Habitat)
+        // =====================================================================
+        function renderStudentRoom(customSpeech = null, tempMood = null) {
+            const stu = getLockedStudent();
+            if (!stu) return;
+
+            updateTopNavForStudent(stu);
+            const pet = PET_SPECIES.find(p => p.id === stu.petId) || PET_SPECIES[0];
+            const pInfo = PERSONALITIES[pet.personality];
+
+            // Habitat Switcher Buttons
+            const habBox = document.getElementById("habitat-buttons");
+            habBox.innerHTML = HABITATS.map(h => {
+                const active = (stu.habitat || "meadow") === h.id;
+                return `
+                    <button onclick="changeHabitat('${h.id}')"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition ${active ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-amber-100'}">
+                        ${h.icon} ${h.zh}
+                    </button>
+                `;
+            }).join("");
+
+            // Stage Background & Scenery
+            const habObj = HABITATS.find(h => h.id === (stu.habitat || "meadow")) || HABITATS[0];
+            const stageEl = document.getElementById("pet-stage-bg");
+            stageEl.className = `${habObj.css} rounded-3xl shadow-xl p-6 sm:p-8 relative overflow-hidden min-h-[380px] flex flex-col items-center justify-between border-4 border-white transition-all duration-500`;
+            document.getElementById("habitat-scenery-layer").innerHTML = getHabitatScenerySVG(habObj.id);
+
+            // Header Info
+            document.getElementById("room-pet-name").textContent = `${stu.adjZH}${stu.conceptZH} · ${stu.adjEN} ${stu.conceptEN}`;
+            document.getElementById("room-pet-species").textContent = `${pet.nameZH} ${pet.nameEN} · 性格：${pInfo.zh} ${pInfo.en}`;
+            document.getElementById("room-score-display").innerHTML = `${stu.score} <span class="text-xs font-semibold">分 pts</span>`;
+
+            // Mood & Speech
+            const mood = tempMood || (stu.score >= 10 ? "happy" : stu.score < 5 ? "sad" : "neutral");
+            document.getElementById("room-pet-avatar").innerHTML = getChibiPetSVG(pet.id, mood);
+
+            if (customSpeech) {
+                document.getElementById("pet-speech-zh").textContent = customSpeech.zh;
+                document.getElementById("pet-speech-en").textContent = customSpeech.en;
+            } else {
+                const defaultLine = stu.score < 5 ? pInfo.petLow : pInfo.petHigh;
+                document.getElementById("pet-speech-zh").textContent = defaultLine.zh;
+                document.getElementById("pet-speech-en").textContent = defaultLine.en;
+            }
+
+            // Status Bars
+            document.getElementById("stat-hunger-text").textContent = `${stu.hunger}%`;
+            document.getElementById("stat-hunger-bar").style.width = `${stu.hunger}%`;
+            document.getElementById("stat-clean-text").textContent = `${stu.cleanliness}%`;
+            document.getElementById("stat-clean-bar").style.width = `${stu.cleanliness}%`;
+            document.getElementById("stat-happy-text").textContent = `${stu.happiness}%`;
+            document.getElementById("stat-happy-bar").style.width = `${stu.happiness}%`;
+
+            // 4 Score-Gated Care Buttons
+            const actions = [
+                { key: "pet", icon: "✋", zh: "撫摸", en: "Pet / Pat", req: 0, color: "from-amber-400 to-orange-500" },
+                { key: "feed", icon: "🍙", zh: "餵食", en: "Feed", req: 5, color: "from-emerald-500 to-green-600" },
+                { key: "bathe", icon: "🛁", zh: "洗澡", en: "Bathe", req: 10, color: "from-sky-500 to-blue-600" },
+                { key: "play", icon: "🎾", zh: "玩耍", en: "Play", req: 15, color: "from-purple-500 to-pink-600" }
+            ];
+
+            document.getElementById("care-buttons-grid").innerHTML = actions.map(act => {
+                const unlocked = stu.score >= act.req;
+                return `
+                    <button onclick="interactCare('${act.key}')"
+                        class="p-3.5 rounded-2xl border-2 transition flex flex-col items-center justify-center text-center relative ${unlocked
+                            ? `bg-gradient-to-br ${act.color} text-white border-transparent shadow-md hover:scale-[1.03] active:scale-95`
+                            : 'bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200/70'}">
+                        <span class="text-2xl mb-1">${unlocked ? act.icon : '🔒'}</span>
+                        <span class="text-xs sm:text-sm font-black">${act.zh} ${act.en}</span>
+                        <span class="mt-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${unlocked ? 'bg-black/20 text-white' : 'bg-slate-200 text-slate-600'}">
+                            ${act.req === 0 ? '免費 Free (0分)' : unlocked ? `已解鎖 ≥${act.req}分` : `需滿 ${act.req} 分`}
+                        </span>
+                    </button>
+                `;
+            }).join("");
+
+            // Random Pet Request Card
+            const wish = WISH_POOL.find(w => w.id === stu.wishId) || WISH_POOL[0];
+            const canFulfill = stu.score >= wish.req;
+            document.getElementById("wish-icon").textContent = wish.icon;
+            document.getElementById("wish-title-zh").textContent = wish.zh;
+            document.getElementById("wish-title-en").textContent = wish.en;
+            document.getElementById("wish-req-score").textContent = `${wish.req} 分 / pts`;
+            document.getElementById("wish-fulfilled-count").textContent = `${stu.fulfilledCount || 0} 次`;
+
+            const wishBtn = document.getElementById("btn-fulfill-wish");
+            if (canFulfill) {
+                wishBtn.disabled = false;
+                wishBtn.className = "mt-4 w-full py-3 rounded-xl font-black text-xs sm:text-sm bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md transition transform hover:-translate-y-0.5";
+                wishBtn.textContent = `✨ 滿足寵物心願！Fulfill Request (已達 ${stu.score}/${wish.req} 分)`;
+            } else {
+                wishBtn.disabled = true;
+                wishBtn.className = "mt-4 w-full py-3 rounded-xl font-bold text-xs sm:text-sm bg-slate-200 text-slate-500 cursor-not-allowed";
+                wishBtn.textContent = `🔒 積分不足，還差 ${wish.req - stu.score} 分 (Need ${wish.req} pts)`;
+            }
+
+            // Student's Score Log
+            const myLogs = appState.logs.filter(l => l.studentId === stu.id);
+            const logBox = document.getElementById("student-score-log");
+            if (myLogs.length === 0) {
+                logBox.innerHTML = `<p class="text-slate-400 text-center py-4">尚無評分紀錄，快在課堂上積極表現吧！</p>`;
+            } else {
+                logBox.innerHTML = myLogs.map(l => `
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <div>
+                            <p class="font-bold text-slate-700">${escapeHTML(l.reason)}</p>
+                            <p class="text-[10px] text-slate-400">${l.time}</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-lg font-black ${l.delta >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                            ${l.delta >= 0 ? '+' + l.delta : l.delta} 分
+                        </span>
+                    </div>
+                `).join("");
+            }
+        }
+
+        function changeHabitat(habitatId) {
+            const stu = getLockedStudent();
+            if (!stu) return;
+            stu.habitat = habitatId;
+            persistState();
+            renderStudentRoom();
+        }
+
+        function interactCare(actionType) {
+            const stu = getLockedStudent();
+            if (!stu) return;
+            const pet = PET_SPECIES.find(p => p.id === stu.petId) || PET_SPECIES[0];
+            const pInfo = PERSONALITIES[pet.personality];
+
+            const thresholds = { pet: 0, feed: 5, bathe: 10, play: 15 };
+            const req = thresholds[actionType];
+
+            // Locked threshold check -> trigger personality reminder
+            if (stu.score < req) {
+                const lockedSpeech = {
+                    zh: `🔒 需要達到 ${req} 分才能${actionType === 'feed' ? '餵食' : actionType === 'bathe' ? '洗澡' : '玩耍'}！${pInfo.petLow.zh}`,
+                    en: `🔒 Reach ${req} pts first! ${pInfo.petLow.en}`
+                };
+                triggerAvatarAnim("animate-pet-wiggle");
+                renderStudentRoom(lockedSpeech, "sad");
+                showToast(`需要至少 ${req} 分才可解鎖！`, `Requires at least ${req} pts!`, "🔒");
+                return;
+            }
+
+            let speech = pInfo.petHigh;
+            let particles = ["💕", "✨", "🌟"];
+
+            if (actionType === "pet") {
+                speech = stu.score < 5 ? pInfo.petLow : pInfo.petHigh;
+                stu.happiness = Math.min(100, stu.happiness + 4);
+                particles = stu.score < 5 ? ["💭", "📚", "✋"] : ["💖", "✨", "🥰"];
+                triggerAvatarAnim("animate-pet-wiggle");
+            } else if (actionType === "feed") {
+                speech = pInfo.feed;
+                stu.hunger = Math.min(100, stu.hunger + 18);
+                stu.happiness = Math.min(100, stu.happiness + 6);
+                particles = ["🍙", "🍣", "🍰", "😋"];
+                triggerAvatarAnim("animate-pet-jump");
+            } else if (actionType === "bathe") {
+                speech = pInfo.bathe;
+                stu.cleanliness = Math.min(100, stu.cleanliness + 22);
+                stu.happiness = Math.min(100, stu.happiness + 8);
+                particles = ["🫧", "✨", "🛁", "💧"];
+                triggerAvatarAnim("animate-pet-wiggle");
+            } else if (actionType === "play") {
+                speech = pInfo.play;
+                stu.happiness = Math.min(100, stu.happiness + 20);
+                stu.hunger = Math.max(15, stu.hunger - 5);
+                particles = ["🎾", "🎉", "⭐", "🎵"];
+                triggerAvatarAnim("animate-pet-jump");
+            }
+
+            spawnParticles(particles);
+            persistState();
+            renderStudentRoom(speech, stu.score < 5 && actionType === "pet" ? "sad" : "happy");
+        }
+
+        function rollNewPetRequest() {
+            const stu = getLockedStudent();
+            if (!stu) return;
+            const others = WISH_POOL.filter(w => w.id !== stu.wishId);
+            const next = others[Math.floor(Math.random() * others.length)];
+            stu.wishId = next.id;
+            persistState();
+            renderStudentRoom();
+            showToast("已更新寵物隨機心願！", "New random pet request generated!", "💌");
+        }
+
+        function fulfillPetRequest() {
+            const stu = getLockedStudent();
+            if (!stu) return;
+            const wish = WISH_POOL.find(w => w.id === stu.wishId) || WISH_POOL[0];
+            if (stu.score < wish.req) return;
+
+            stu.fulfilledCount = (stu.fulfilledCount || 0) + 1;
+            stu.happiness = 100;
+            stu.hunger = Math.min(100, stu.hunger + 15);
+            stu.cleanliness = Math.min(100, stu.cleanliness + 15);
+
+            // Pick a fresh next wish
+            const others = WISH_POOL.filter(w => w.id !== wish.id);
+            stu.wishId = others[Math.floor(Math.random() * others.length)].id;
+
+            spawnParticles(["🏆", "🎉", "💖", "👑", "✨"]);
+            triggerAvatarAnim("animate-pet-jump");
+            persistState();
+
+            const celebSpeech = {
+                zh: `太棒了！心願「${wish.zh}」達成啦！主人你簡直是經濟學之神！`,
+                en: `Woohoo! Wish "${wish.en}" fulfilled! Master, you are an Economics superstar!`
+            };
+            renderStudentRoom(celebSpeech, "happy");
+            showToast("成功滿足寵物心願！獲得榮譽徽章！", "Pet wish fulfilled! Celebration!", "🏆");
+        }
+
+        function triggerAvatarAnim(animClass) {
+            const el = document.getElementById("room-pet-avatar");
+            el.classList.remove("animate-pet-float", "animate-pet-jump", "animate-pet-wiggle");
+            void el.offsetWidth;
+            el.classList.add(animClass);
+            setTimeout(() => {
+                el.classList.remove("animate-pet-jump", "animate-pet-wiggle");
+                el.classList.add("animate-pet-float");
+            }, 900);
+        }
+
+        function spawnParticles(emojis) {
+            const container = document.getElementById("particle-container");
+            container.innerHTML = "";
+            emojis.forEach((em, idx) => {
+                const span = document.createElement("span");
+                span.textContent = em;
+                span.className = "absolute text-2xl sm:text-3xl animate-particle select-none";
+                span.style.left = `${20 + idx * 18}%`;
+                span.style.top = `${30 + (idx % 2) * 15}%`;
+                span.style.animationDelay = `${idx * 0.1}s`;
+                container.appendChild(span);
+            });
+        }
+
+        // =====================================================================
+        // 👩‍🏫 TEACHER ADMIN DASHBOARD FUNCTIONS
+        // =====================================================================
+        function populateAdminPetDropdown() {
+            // Deprecated: Students now choose their own pets in the Adoption Wizard.
+        }
+
+        function adminAddStudent() {
+            const nameInput = document.getElementById("admin-new-student-name");
+            const name = nameInput.value.trim();
+            if (!name) {
+                showToast("請輸入學生姓名！", "Please enter student name!", "⚠️");
+                return;
+            }
+            appState.students.push({
+                id: "stu_" + Date.now(),
+                name: name,
+                petCreated: false,
+                petId: null,
+                conceptZH: "",
+                conceptEN: "",
+                adjZH: "",
+                adjEN: "",
+                score: 0,
+                hunger: 50,
+                cleanliness: 50,
+                happiness: 60,
+                habitat: "meadow",
+                wishId: "w5",
+                fulfilledCount: 0
+            });
+            nameInput.value = "";
+            persistState();
+            renderTeacherAdmin();
+            showToast(`已新增學生：${name}`, `Added student: ${name}`, "✅");
+        }
+
+        function adminAdjustScore(studentId, delta, reason) {
+            const stu = appState.students.find(s => s.id === studentId);
+            if (!stu) return;
+
+            const numericDelta = parseInt(delta, 10);
+            if (isNaN(numericDelta) || numericDelta === 0) {
+                showToast("請輸入有效的非零整數分數！", "Enter a valid non-zero integer!", "⚠️");
+                return;
+            }
+
+            stu.score = Math.max(0, (stu.score || 0) + numericDelta);
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+            appState.logs.unshift({
+                id: "log_" + Date.now(),
+                studentId: stu.id,
+                studentName: stu.name,
+                delta: numericDelta,
+                reason: reason || (numericDelta > 0 ? "課堂表現優良 Good Performance" : "課堂扣分 Deduction"),
+                time: timeStr
+            });
+            if (appState.logs.length > 50) appState.logs.pop();
+
+            persistState();
+            renderTeacherAdmin();
+            showToast(
+                `${stu.name} ${numericDelta >= 0 ? '+' + numericDelta : numericDelta} 分 (${reason})`,
+                `Updated ${stu.name}'s score`,
+                numericDelta >= 0 ? "🌟" : "📉"
+            );
+        }
+
+        function adminApplyCustomScore(studentId) {
+            const ptsInput = document.getElementById(`custom-pts-${studentId}`);
+            const reasonInput = document.getElementById(`custom-reason-${studentId}`);
+            const delta = parseInt(ptsInput.value, 10);
+            const reason = reasonInput.value.trim() || (delta >= 0 ? "老師特別加分 Custom Bonus" : "老師特別扣分 Custom Deduction");
+            adminAdjustScore(studentId, delta, reason);
+        }
+
+        function adminTriggerStudentWish(studentId) {
+            const stu = appState.students.find(s => s.id === studentId);
+            if (!stu) return;
+            const others = WISH_POOL.filter(w => w.id !== stu.wishId);
+            const next = others[Math.floor(Math.random() * others.length)];
+            stu.wishId = next.id;
+            persistState();
+            renderTeacherAdmin();
+            showToast(`已為 ${stu.name} 發送新寵物心願：${next.zh}`, `Sent wish to ${stu.name}`, "💌");
+        }
+
+        function triggerClassWideRequest() {
+            appState.students.forEach(stu => {
+                const others = WISH_POOL.filter(w => w.id !== stu.wishId);
+                stu.wishId = others[Math.floor(Math.random() * others.length)].id;
+            });
+            persistState();
+            renderTeacherAdmin();
+            showToast("已向全班所有寵物發送隨機新心願！", "Broadcasted random requests to entire class!", "📢");
+        }
+
+        function renderTeacherAdmin() {
+            document.getElementById("admin-total-students").textContent = `${appState.students.length} 位學生`;
+
+            const listEl = document.getElementById("admin-students-list");
+            listEl.innerHTML = appState.students.map(stu => {
+                const pet = stu.petCreated ? PET_SPECIES.find(p => p.id === stu.petId) : null;
+                const pInfo = pet ? PERSONALITIES[pet.personality] : { badge: 'bg-slate-100 text-slate-500', zh: '未知', en: 'Unknown' };
+                const wish = WISH_POOL.find(w => w.id === stu.wishId) || WISH_POOL[0];
+                const petTitle = stu.petCreated ? `${stu.adjZH}${stu.conceptZH} · ${stu.adjEN} ${stu.conceptEN}` : "尚未命名與選擇寵物 Not Adopted Yet";
+                const petIcon = pet ? getChibiPetSVG(pet.id, stu.score >= 5 ? 'happy' : 'neutral') : '<div class="text-3xl text-center mt-2">🥚</div>';
+
+                return `
+                    <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-200/80 space-y-4">
+                        <!-- Top Info Row -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 p-1 shrink-0">
+                                    ${petIcon}
+                                </div>
+                                <div>
+                                    <div class="flex items-center flex-wrap gap-2">
+                                        <h4 class="text-base font-black text-slate-800">${escapeHTML(stu.name)}</h4>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${pInfo.badge}">
+                                            ${pet ? pet.nameZH : '尚未選擇'} (${pInfo.zh} ${pInfo.en})
+                                        </span>
+                                    </div>
+                                    <p class="text-xs font-bold text-indigo-700 mt-0.5">${escapeHTML(petTitle)}</p>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">💌 目前心願：${wish.zh} (需 ${wish.req} 分)</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 self-end sm:self-center">
+                                <button onclick="adminTriggerStudentWish('${stu.id}')" title="發送新寵物心願"
+                                    class="px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-extrabold transition">
+                                    💌 換心願
+                                </button>
+                                <div class="px-4 py-2 rounded-2xl bg-amber-400 text-amber-950 font-black text-base shadow-xs">
+                                    ${stu.score} 分
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick One-Click Score Buttons -->
+                        <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+                            <span class="text-[11px] font-extrabold text-slate-500 mr-1">⚡ 快捷評分 Quick:</span>
+                            <button onclick="adminAdjustScore('${stu.id}', 2, '積極回答 Active Answer')"
+                                class="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold transition shadow-2xs">
+                                +2 積極回答
+                            </button>
+                            <button onclick="adminAdjustScore('${stu.id}', 5, '經濟學神分析 Great Econ Insight')"
+                                class="px-2.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold transition shadow-2xs">
+                                +5 神分析
+                            </button>
+                            <button onclick="adminAdjustScore('${stu.id}', 10, '小組優勝 Team Winner')"
+                                class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold transition shadow-2xs">
+                                +10 小組優勝
+                            </button>
+                            <button onclick="adminAdjustScore('${stu.id}', -2, '分心聊天 Distracted')"
+                                class="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold transition shadow-2xs">
+                                -2 分心聊天
+                            </button>
+                            <button onclick="adminAdjustScore('${stu.id}', -5, '未交功課 Missing Work')"
+                                class="px-2.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold transition shadow-2xs">
+                                -5 未交功課
+                            </button>
+                        </div>
+
+                        <!-- Custom Score & Reason Input -->
+                        <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <span class="text-[11px] font-extrabold text-slate-600 shrink-0">✏️ 自訂加減分:</span>
+                            <input id="custom-pts-${stu.id}" type="number" value="3" placeholder="分數 (+3 / -3)"
+                                class="w-full sm:w-24 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-black text-center focus:outline-none focus:border-indigo-500">
+                            <input id="custom-reason-${stu.id}" type="text" placeholder="輸入加減分理由 (例如：幫助同學解釋邊際成本)"
+                                class="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold focus:outline-none focus:border-indigo-500">
+                            <button onclick="adminApplyCustomScore('${stu.id}')"
+                                class="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-black transition shrink-0">
+                                確認調整 Apply
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            // Render Live Class Activity Log
+            const logBox = document.getElementById("admin-activity-log");
+            if (appState.logs.length === 0) {
+                logBox.innerHTML = `<p class="text-slate-400 text-center py-6">尚無積分異動紀錄</p>`;
+            } else {
+                logBox.innerHTML = appState.logs.map(l => `
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="font-black text-slate-800 truncate">${escapeHTML(l.studentName)}</p>
+                            <p class="text-[11px] text-slate-600 truncate">${escapeHTML(l.reason)}</p>
+                            <p class="text-[10px] text-slate-400">${l.time}</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-xl font-black shrink-0 ${l.delta >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                            ${l.delta >= 0 ? '+' + l.delta : l.delta} 分
+                        </span>
+                    </div>
+                `).join("");
+            }
+        }
+
+        // =====================================================================
+        // 🛠️ UTILITIES
+        // =====================================================================
+        let toastTimer = null;
+        function showToast(zh, en, icon = "✨") {
+            const box = document.getElementById("toast-box");
+            document.getElementById("toast-icon").textContent = icon;
+            document.getElementById("toast-zh").textContent = zh;
+            document.getElementById("toast-en").textContent = en;
+            box.classList.remove("hidden");
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => box.classList.add("hidden"), 3200);
+        }
+
+        function escapeHTML(str) {
+            return String(str || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+    </script>
+</body>
+</html>
