@@ -16,6 +16,7 @@ async function sparkEnsureAccounts(){
   if(!snap.exists)await ref.set({studentId:stu.id,earnedScore:Number(stu.score)||0,spentScore:0,boundUid:null,lastTransactionId:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
   else{const d=snap.data();stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;}
  }
+ await classroomRef().set({students:appState.students,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
  saveLocalStateOnly();
 }
 async function sparkBindStudent(studentId){
@@ -178,6 +179,43 @@ async function bootApplication(){
   }catch(e){console.error("Cloud startup failed",e);setSyncStatus("雲端連線錯誤，學生登入已停用",false);}
  }
  if(saved&&appState.students.some(x=>x.id===saved))await enterLockedStudentMode(saved,true);else renderLandingRoster();
+}
+
+
+async function adminClearAllRecords(){
+ if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
+ if(!window.confirm("確定要清空全班所有資料？這會刪除學生名單、累計積分、消費紀錄、寵物資料及裝置綁定，無法復原。"))return;
+ const previous=appState;
+ try{
+  const accounts=await firestoreDb.collection("studentAccounts").get();
+  let batch=firestoreDb.batch(),count=0;
+  async function flush(){if(count){await batch.commit();batch=firestoreDb.batch();count=0;}}
+  for(const accountDoc of accounts.docs){
+   const data=accountDoc.data(),uid=data.boundUid;
+   const txs=await accountDoc.ref.collection("transactions").get();
+   for(const txDoc of txs.docs){batch.delete(txDoc.ref);count++;if(count>=400)await flush();}
+   if(uid){
+    batch.set(firestoreDb.collection("revokedDevices").doc(uid),{studentId:accountDoc.id,revokedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    count++;
+    batch.delete(sparkDeviceRef(uid));count++;
+   }
+   batch.delete(accountDoc.ref);count++;
+   if(count>=400)await flush();
+  }
+  await flush();
+  await classroomRef().set({students:[],logs:[],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  appState={students:[],logs:[]};saveLocalStateOnly();renderTeacherAdmin();renderLandingRoster();
+  showToast("全班學生、積分、消費紀錄及裝置綁定已清空","Class records and device bindings cleared","🗑️");
+ }catch(e){console.error("Clear all records failed",e);appState=previous;saveLocalStateOnly();renderTeacherAdmin();showToast("清空未能完成，請檢查雲端資料後再試","Clear operation did not finish; please review cloud records","⚠️");}
+}
+async function logoutRole(){
+ const wasTeacher=currentRole==="teacher";
+ if(sparkAccountUnsubscribe){sparkAccountUnsubscribe();sparkAccountUnsubscribe=null;}
+ currentRole="landing";lockedStudentId=null;sessionStorage.removeItem(SESSION_LOCK_KEY);localStorage.removeItem(SESSION_LOCK_KEY);
+ document.getElementById("nav-student-locked").classList.add("hidden");document.getElementById("nav-student-locked").classList.remove("flex");
+ document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");
+ if(wasTeacher&&firebaseAuth&&isVerifiedTeacher(firebaseAuth.currentUser)){try{await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();}catch(e){console.warn("Could not return to anonymous session",e);}}
+ switchView("view-landing");renderLandingRoster();showToast("已登出並解除畫面鎖定","Logged out","👋");
 }
 
 </script>
