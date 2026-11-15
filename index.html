@@ -450,6 +450,7 @@ async function enterLockedStudentMode(id,silent=false){
  try{
   setSyncStatus("正在確認學生帳戶…",false);
   const account=await sparkBindStudent(id);
+  const hasCloudPetProfile=Object.prototype.hasOwnProperty.call(account,"petCreated");
   if(account.migrationVersion!==1||account.legacySpendNeedsReview!==false){showToast("這個學生的積分尚待老師核對，請聯絡老師。","Student points need teacher reconciliation.","⚠️");return;}
   // Read private classroom data only after this device has been bound.
   const classSnap=await classroomRef().get();
@@ -463,6 +464,11 @@ async function enterLockedStudentMode(id,silent=false){
   sparkApplyStudentProfile(stu,account);
   await sparkLoadTransactions(id);
   currentRole="student";lockedStudentId=id;sessionStorage.setItem(SESSION_LOCK_KEY,id);localStorage.setItem(SESSION_LOCK_KEY,id);
+  // Migrate a pet already saved in this browser by the previous local-only version.
+  if(!hasCloudPetProfile&&stu.petCreated){
+   try{await sparkSaveStudentProfile(stu);}
+   catch(profileError){console.warn("Existing local pet profile could not be migrated yet",profileError);showToast("已登入，但原有寵物資料尚未同步到雲端。請確認新版 Firestore Rules 已發布。","Signed in; existing pet profile is not synced yet.","⚠️");}
+  }
   document.getElementById("nav-student-locked").classList.remove("hidden");document.getElementById("nav-student-locked").classList.add("flex");
   document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");
   sparkListenAccount(id);updateTopNavForStudent(stu);listenCloudState();
