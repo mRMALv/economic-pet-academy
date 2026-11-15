@@ -186,6 +186,32 @@ test("transaction records cannot be edited or deleted by students", async () => 
   await assertFails(deleteDoc(ledger(db)));
 });
 
+test("students cannot forge legacy migration ledger entries", async () => {
+  await seedAccount();
+  await bind();
+  const db = studentDb();
+  await assertFails(setDoc(ledger(db, "stu-a", "legacy_0001"), {
+    studentId: "stu-a", uid: "legacy-import", action: "legacy_import",
+    amount: 10, reason: "forged import", createdAt: serverTimestamp()
+  }));
+});
+
+test("teacher can append imported legacy spend history", async () => {
+  await seedAccount("stu-a", { spentScore: 10 });
+  const db = teacherDb();
+  await assertSucceeds(setDoc(ledger(db, "stu-a", "legacy_0001"), {
+    studentId: "stu-a", uid: "legacy-import", action: "legacy_import",
+    amount: 10, reason: "舊版紀錄匯入：餵食寵物", createdAt: serverTimestamp()
+  }));
+  assert.equal((await getDoc(ledger(db, "stu-a", "legacy_0001"))).data().amount, 10);
+});
+
+test("student cannot read another device binding", async () => {
+  await seedAccount();
+  await bind("student-uid", "stu-a");
+  await assertFails(getDoc(doc(studentDb(), "devices", "other-uid")));
+});
+
 test("a revoked device cannot bind again", async () => {
   await seedAccount("stu-a");
   await env.withSecurityRulesDisabled(async context => {
