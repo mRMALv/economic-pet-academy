@@ -21,7 +21,8 @@
 7. 本程式目前只完成程式碼層面的語法檢查，**尚未以 Firebase Emulator Suite 實測 Security Rules、交易競態、裝置綁定及資料清空流程**。不得直接部署到正式 Firebase 專案。
 
 ## 下一步正式上線前必做
-- 用 Firebase Emulator Suite 測試：首次綁定、同裝置改選他人、同學生第二裝置、解除綁定後舊 UID 重試、餘額不足、連續／重複消費、偽造 earnedScore、跨學生讀寫、老師加扣分及清空全班。
+- 確認 GitHub Actions 的 Firestore Rules Emulator 測試全部通過；如失敗，先修正規則或測試。
+- 再補充測試：同學生第二裝置、老師解除綁定後新裝置重新綁定、清空全班的批次刪除流程、老師加扣分和並行消費。
 - 確認 Spark 專案 Firestore 用量及規則部署版本。
 - 與老師核對舊消費資料及初始化餘額。
 - 完成測試後才考慮合併到 main 及部署 Firestore Rules／GitHub Pages。
