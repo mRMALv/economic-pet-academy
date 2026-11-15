@@ -234,8 +234,8 @@ test("concurrent spends cannot exceed the available balance", async () => {
   await seedAccount("stu-a", { earnedScore: 30 });
   await bind();
   const results = await Promise.allSettled([
-    spend({ txId: "parallel-a", amount: 20 }),
-    spend({ txId: "parallel-b", amount: 20 })
+    spend({ txId: "parallel-a", action: "wish", amount: 25 }),
+    spend({ txId: "parallel-b", action: "wish", amount: 25 })
   ]);
   assert.equal(results.filter(x => x.status === "fulfilled").length, 1);
   assert.equal(results.filter(x => x.status === "rejected").length, 1);
