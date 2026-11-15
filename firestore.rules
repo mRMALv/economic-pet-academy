@@ -1,22 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
     function isTeacher() {
-      return request.auth != null
+      return signedIn()
         && request.auth.token.email == "mariannamangyh@gmail.com"
         && request.auth.token.email_verified == true
         && request.auth.token.firebase.sign_in_provider == "password";
     }
 
     function isAnonymousStudent() {
-      return request.auth != null
+      return signedIn()
         && request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
+    function devicePath(uid) {
+      return /databases/$(database)/documents/devices/$(uid);
+    }
+
+    function accountPath(studentId) {
+      return /databases/$(database)/documents/studentAccounts/$(studentId);
     }
 
     function isBoundStudent(studentId) {
       return isAnonymousStudent()
-        && exists(/databases/$(database)/documents/devices/$(request.auth.uid))
-        && get(/databases/$(database)/documents/devices/$(request.auth.uid)).data.studentId == studentId;
+        && exists(devicePath(request.auth.uid))
+        && get(devicePath(request.auth.uid)).data.studentId == studentId
+        && exists(accountPath(studentId))
+        && get(accountPath(studentId)).data.boundUid == request.auth.uid;
+    }
+
+    function validSpendAction(action, amount) {
+      return (action == "pet" && amount == 1)
+        || (action == "feed" && amount == 5)
+        || (action == "bathe" && amount == 10)
+        || (action == "play" && amount == 15)
+        || (action == "wish" && [6, 8, 12, 18, 22, 25].hasAny([amount]));
     }
 
     match /classrooms/{classroomId} {
@@ -25,17 +47,63 @@ service cloud.firestore {
     }
 
     match /devices/{uid} {
-      allow read: if request.auth != null && (request.auth.uid == uid || isTeacher());
-      allow write: if false;
+      allow read: if isTeacher() || (signedIn() && request.auth.uid == uid);
+      // First bind must atomically claim an existing, teacher-created account.
+      allow create: if isAnonymousStudent()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['studentId', 'boundAt'])
+        && request.resource.data.studentId is string
+        && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid;
+      // Only the teacher may unbind or reassign a device.
+      allow update, delete: if isTeacher();
     }
 
     match /studentAccounts/{studentId} {
       allow read: if isTeacher() || isBoundStudent(studentId);
-      allow write: if false;
+
+      // Teacher initializes and maintains earned points. A student can only:
+      // (1) bind once to an unbound account, or (2) increase spentScore
+      // in the same atomic batch that creates its immutable ledger entry.
+      allow create, delete: if isTeacher();
+      allow update: if isTeacher()
+        || (
+          isAnonymousStudent()
+          && resource.data.boundUid == null
+          && request.resource.data.boundUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['boundUid', 'updatedAt'])
+          && getAfter(devicePath(request.auth.uid)).data.studentId == studentId
+        )
+        || (
+          isBoundStudent(studentId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spentScore', 'lastTransactionId', 'updatedAt'])
+          && request.resource.data.earnedScore == resource.data.earnedScore
+          && request.resource.data.boundUid == resource.data.boundUid
+          && request.resource.data.spentScore is int
+          && request.resource.data.spentScore > resource.data.spentScore
+          && request.resource.data.spentScore <= request.resource.data.earnedScore
+          && request.resource.data.lastTransactionId is string
+          && getAfter(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(request.resource.data.lastTransactionId)).data.amount
+             == request.resource.data.spentScore - resource.data.spentScore
+          && getAfter(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(request.resource.data.lastTransactionId)).data.uid
+             == request.auth.uid
+        );
 
       match /transactions/{transactionId} {
         allow read: if isTeacher() || isBoundStudent(studentId);
-        allow write: if false;
+        allow create: if isBoundStudent(studentId)
+          && !exists(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(transactionId))
+          && request.resource.data.keys().hasOnly(['studentId', 'uid', 'action', 'amount', 'reason', 'createdAt'])
+          && request.resource.data.studentId == studentId
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.action is string
+          && request.resource.data.amount is int
+          && validSpendAction(request.resource.data.action, request.resource.data.amount)
+          && request.resource.data.reason is string
+          && request.resource.data.reason.size() <= 120
+          && getAfter(accountPath(studentId)).data.lastTransactionId == transactionId
+          && getAfter(accountPath(studentId)).data.spentScore
+             == get(accountPath(studentId)).data.spentScore + request.resource.data.amount;
+        allow update, delete: if false;
       }
     }
   }
