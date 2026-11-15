@@ -8,17 +8,35 @@ service cloud.firestore {
         && request.auth.token.firebase.sign_in_provider == "password";
     }
 
-    function isClassroomUser() {
+    function isAnonymousStudent() {
       return request.auth != null
-        && (
-          request.auth.token.firebase.sign_in_provider == "anonymous"
-          || isTeacher()
-        );
+        && request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
+    function isBoundStudent(studentId) {
+      return isAnonymousStudent()
+        && exists(/databases/$(database)/documents/devices/$(request.auth.uid))
+        && get(/databases/$(database)/documents/devices/$(request.auth.uid)).data.studentId == studentId;
     }
 
     match /classrooms/{classroomId} {
-      allow read: if isClassroomUser();
+      allow read: if isAnonymousStudent() || isTeacher();
       allow create, update, delete: if isTeacher();
+    }
+
+    match /devices/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isTeacher());
+      allow write: if false;
+    }
+
+    match /studentAccounts/{studentId} {
+      allow read: if isTeacher() || isBoundStudent(studentId);
+      allow write: if false;
+
+      match /transactions/{transactionId} {
+        allow read: if isTeacher() || isBoundStudent(studentId);
+        allow write: if false;
+      }
     }
   }
 }
