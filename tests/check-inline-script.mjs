@@ -32,4 +32,48 @@ if (roster[0].pointsReady !== true || roster[1].pointsReady !== true || roster[2
 if ("migrationVersion" in roster[1] || "legacySpendNeedsReview" in roster[1]) {
   throw new Error("Private migration metadata leaked into the public roster");
 }
-console.log("Inline application JavaScript syntax and roster-readiness regression: OK");
+// A cached Firestore document must not overwrite a more recent server balance.
+const snapshotGuard = inlineScripts[0].match(/function sparkShouldApplyServerAccountSnapshot\(snapshot\)\{[\s\S]*?\n\}/);
+if (!snapshotGuard) {
+  throw new Error("Could not locate the account snapshot freshness guard");
+}
+const snapshotSandbox = {};
+vm.runInNewContext(snapshotGuard[0], snapshotSandbox);
+if (snapshotSandbox.sparkShouldApplyServerAccountSnapshot({ metadata: { fromCache: true } }) !== false) {
+  throw new Error("Cached account snapshots must be ignored");
+}
+if (snapshotSandbox.sparkShouldApplyServerAccountSnapshot({ metadata: { fromCache: false } }) !== true) {
+  throw new Error("Server-confirmed account snapshots must be applied");
+}
+
+// A classroom roster update must not overwrite the active student's balance;
+// the account listener is the single source of truth for these values.
+const balanceMergeFunction = inlineScripts[0].match(/function sparkPreserveActiveStudentBalance\(remote,local,role,studentId\)\{[\s\S]*?\n\}/);
+if (!balanceMergeFunction) {
+  throw new Error("Could not locate the active-student balance merge helper");
+}
+const mergeSandbox = {};
+vm.runInNewContext(balanceMergeFunction[0], mergeSandbox);
+const mergedBalance = mergeSandbox.sparkPreserveActiveStudentBalance(
+  { id: "stu-a", name: "Student A", score: 10 },
+  { id: "stu-a", score: 18, spentScore: 3 },
+  "student",
+  "stu-a"
+);
+if (mergedBalance.score !== 18 || mergedBalance.spentScore !== 3) {
+  throw new Error("A classroom roster snapshot rolled back the student's account balance");
+}
+const unchangedBalance = mergeSandbox.sparkPreserveActiveStudentBalance(
+  { id: "stu-b", score: 10 },
+  { id: "stu-b", score: 18, spentScore: 3 },
+  "student",
+  "stu-a"
+);
+if (unchangedBalance.score !== 10 || unchangedBalance.spentScore !== undefined) {
+  throw new Error("A student session must not override another student's roster fields");
+}
+const wishFunction = inlineScripts[0].match(/async function rollNewPetRequest\(\)\{[\s\S]*?\n\}/);
+if (!wishFunction || !/await persistState\(\)/.test(wishFunction[0])) {
+  throw new Error("Wish refresh must await its cloud save");
+}
+console.log("Inline application JavaScript syntax, roster readiness, and balance freshness regressions: OK");
