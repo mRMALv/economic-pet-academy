@@ -165,7 +165,21 @@ async function confirmPetAdoption(){
 function renderStudentRoom(speech=null){const stu=getLockedStudent();if(!stu)return;const balance=getAvailableScore(stu),pet=PET_SPECIES.find(p=>p.id===stu.petId)||PET_SPECIES[0],person=PERSONALITIES[pet.personality]||PERSONALITIES["乖巧"];updateTopNavForStudent(stu);document.getElementById("habitat-buttons").innerHTML=HABITATS.map(h=>`<button onclick="changeHabitat('${h.id}')" class="px-2.5 py-1.5 rounded-xl text-xs font-bold ${(stu.habitat||"meadow")===h.id?"bg-amber-500 text-white":"bg-slate-100 text-slate-600"}">${h.icon} ${h.zh}</button>`).join("");const habitat=HABITATS.find(h=>h.id===(stu.habitat||"meadow"))||HABITATS[0];document.getElementById("pet-stage-bg").className="bg-"+habitat.id+" rounded-3xl shadow-xl p-6 sm:p-8 min-h-[380px] flex flex-col items-center justify-between border-4 border-white";document.getElementById("room-pet-name").textContent=stu.adjZH+stu.conceptZH+" · "+stu.adjEN+" "+stu.conceptEN;document.getElementById("room-pet-species").textContent=pet.nameZH+" "+pet.nameEN+" · 性格："+pet.personality;document.getElementById("room-score-display").textContent=balance+" 可用分";document.getElementById("room-pet-avatar").textContent=pet.emoji;document.getElementById("pet-speech-zh").textContent=speech||(balance<5?person.low:person.high);document.getElementById("pet-speech-en").textContent=speech?"Your pet is happy to see you!":"Earn class points to unlock more care actions!";for(const[k,v,t]of [["hunger","hunger","stat-hunger"],["cleanliness","cleanliness","stat-clean"],["happiness","happiness","stat-happy"]]){document.getElementById(t+"-text").textContent=stu[v]+"%";document.getElementById(t+"-bar").style.width=stu[v]+"%";}const actions=[{key:"pet",icon:"✋",zh:"撫摸",cost:1},{key:"feed",icon:"🍙",zh:"餵食",cost:5},{key:"bathe",icon:"🛁",zh:"洗澡",cost:10},{key:"play",icon:"🎾",zh:"玩耍",cost:15}];document.getElementById("care-buttons-grid").innerHTML=actions.map(a=>{const ok=balance>=a.cost;return `<button onclick="interactCare('${a.key}')" class="p-3 rounded-2xl border-2 ${ok?"bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent":"bg-slate-100 text-slate-400 border-slate-200"}"><span class="text-2xl block mb-1">${ok?a.icon:"🔒"}</span><span class="text-xs font-black">${a.zh}</span><span class="block text-[10px] mt-1">${ok?"消耗 "+a.cost+" 分":"還差 "+(a.cost-balance)+" 分"}</span></button>`;}).join("");const wish=WISH_POOL.find(w=>w.id===stu.wishId)||WISH_POOL[0],can=balance>=wish.req;document.getElementById("wish-icon").textContent=wish.icon;document.getElementById("wish-title-zh").textContent=wish.zh;document.getElementById("wish-title-en").textContent=wish.en;document.getElementById("wish-req-score").textContent="消耗 "+wish.req+" 分 / pts";document.getElementById("wish-fulfilled-count").textContent=(stu.fulfilledCount||0)+" 次";const wb=document.getElementById("btn-fulfill-wish");wb.disabled=!can;wb.className="mt-4 w-full py-3 rounded-xl font-black text-sm "+(can?"bg-purple-600 text-white":"bg-slate-200 text-slate-500");wb.textContent=can?"✨ 消耗 "+wish.req+" 分，滿足寵物心願！":"🔒 可用積分不足，還差 "+(wish.req-balance)+" 分";const teacherLogs=appState.logs.filter(l=>l.studentId===stu.id),spendLogs=Array.isArray(stu.spendLogs)?stu.spendLogs:[],logs=[...teacherLogs,...spendLogs];document.getElementById("student-score-log").innerHTML=logs.length?logs.map(l=>`<div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border"><div><p class="font-bold">${escapeHTML(l.reason||"寵物互動消耗")}</p><p class="text-[10px] text-slate-400">${l.time||""}</p></div><span class="font-black ${l.delta>=0?"text-emerald-700":"text-rose-700"}">${l.delta>=0?"+":""}${l.delta} 分</span></div>`).join(""):'<p class="text-slate-400 text-center py-4">尚無積分紀錄，快在課堂上積極表現吧！</p>';}
 function changeHabitat(id){const stu=getLockedStudent();if(!stu)return;stu.habitat=id;persistState();renderStudentRoom();}
 function interactCare(type){const stu=getLockedStudent();if(!stu)return;const costs={pet:1,feed:5,bathe:10,play:15},cost=costs[type];if(!Number.isInteger(cost))return;const balance=getAvailableScore(stu);if(balance<cost){showToast("可用積分不足！這次互動需要 "+cost+" 分，你目前有 "+balance+" 分。","Not enough available points.","🔒");renderStudentRoom(PERSONALITIES[(PET_SPECIES.find(p=>p.id===stu.petId)||PET_SPECIES[0]).personality].low);return;}const pet=PET_SPECIES.find(p=>p.id===stu.petId)||PET_SPECIES[0],p=PERSONALITIES[pet.personality]||PERSONALITIES["乖巧"];recordStudentSpend(stu,cost,({pet:"撫摸寵物",feed:"餵食寵物",bathe:"替寵物洗澡",play:"和寵物玩耍"})[type]+"（消耗）");if(type==="pet")stu.happiness=Math.min(100,stu.happiness+4);if(type==="feed"){stu.hunger=Math.min(100,stu.hunger+18);stu.happiness=Math.min(100,stu.happiness+6);}if(type==="bathe"){stu.cleanliness=Math.min(100,stu.cleanliness+22);stu.happiness=Math.min(100,stu.happiness+8);}if(type==="play"){stu.happiness=Math.min(100,stu.happiness+20);stu.hunger=Math.max(15,stu.hunger-5);}persistState();renderStudentRoom(p[type]||p.high);showToast("互動完成，已消耗 "+cost+" 分！","Interaction complete: "+cost+" points spent.","✨");}
-function rollNewPetRequest(){const stu=getLockedStudent();if(!stu)return;const pool=WISH_POOL.filter(w=>w.id!==stu.wishId);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;persistState();renderStudentRoom();showToast("已更新寵物隨機心願！","New pet request generated!","💌");}
+let wishRefreshInProgress=false;
+async function rollNewPetRequest(){
+ const stu=getLockedStudent();if(!stu||wishRefreshInProgress)return;
+ wishRefreshInProgress=true;
+ try{
+  const pool=WISH_POOL.filter(w=>w.id!==stu.wishId);
+  if(!pool.length)return;
+  stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;
+  const synced=await persistState();
+  renderStudentRoom();
+  showToast(synced?"已更新寵物心願！積分沒有變動。":"心願已在本機更新，但雲端同步失敗。",synced?"Wish updated; points unchanged.":"Wish saved locally only.",synced?"💌":"⚠️");
+ }finally{
+  wishRefreshInProgress=false;
+ }
+}
 function fulfillPetRequest(){const stu=getLockedStudent();if(!stu)return;const wish=WISH_POOL.find(w=>w.id===stu.wishId)||WISH_POOL[0],balance=getAvailableScore(stu);if(balance<wish.req){showToast("可用積分不足！需要 "+wish.req+" 分，目前有 "+balance+" 分。","Not enough available points.","🔒");return;}recordStudentSpend(stu,wish.req,"達成寵物心願（消耗）");stu.fulfilledCount=(stu.fulfilledCount||0)+1;stu.happiness=100;stu.hunger=Math.min(100,stu.hunger+15);stu.cleanliness=Math.min(100,stu.cleanliness+15);const pool=WISH_POOL.filter(w=>w.id!==wish.id);stu.wishId=pool[Math.floor(Math.random()*pool.length)].id;persistState();renderStudentRoom("太棒了！心願達成啦！主人你簡直是經濟學之神！");showToast("心願達成，已消耗 "+wish.req+" 分！","Wish fulfilled: "+wish.req+" points spent.","🏆");}
 function adminAddStudent(){const input=document.getElementById("admin-new-student-name"),name=input.value.trim();if(!name){showToast("請輸入學生姓名！","Please enter student name!","⚠️");return;}appState.students.push({id:"stu_"+Date.now(),name,petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,hunger:50,cleanliness:50,happiness:60,habitat:"meadow",wishId:"w5",fulfilledCount:0});input.value="";persistState();renderTeacherAdmin();showToast("已新增學生："+name,"Student added","✅");}
 function adminAdjustScore(id,delta,reason){const stu=appState.students.find(s=>s.id===id);if(!stu)return;const amount=parseInt(delta,10);if(!Number.isInteger(amount)||amount===0){showToast("請輸入有效的非零整數分數！","Enter a valid non-zero integer!","⚠️");return;}stu.score=Math.max(0,(stu.score||0)+amount);const now=new Date(),time=now.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});appState.logs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:amount,reason:reason||"老師評分 Teacher Score",time});if(appState.logs.length>50)appState.logs.pop();persistState();renderTeacherAdmin();showToast(stu.name+" "+(amount>0?"+":"")+amount+" 分","Score updated",amount>0?"🌟":"📉");}
@@ -353,10 +367,15 @@ async function sparkLoadTransactions(studentId){
  const stu=appState.students.find(x=>x.id===studentId);
  if(stu)stu.spendLogs=snap.docs.map(d=>{const data=d.data(),amount=Number(data.amount||0);return{id:d.id,delta:data.action==="legacy_refund_adjustment"?amount:-amount,reason:data.reason||"寵物互動消耗",time:data.createdAt&&data.createdAt.toDate?data.createdAt.toDate().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"}):""};});
 }
+function sparkShouldApplyServerAccountSnapshot(snapshot){
+ return !(snapshot&&snapshot.metadata&&snapshot.metadata.fromCache===true);
+}
 function sparkListenAccount(studentId){
  if(sparkAccountUnsubscribe)sparkAccountUnsubscribe();
- sparkAccountUnsubscribe=sparkAccountRef(studentId).onSnapshot(snap=>{
-  if(!snap.exists)return;
+ sparkAccountUnsubscribe=sparkAccountRef(studentId).onSnapshot({includeMetadataChanges:true},snap=>{
+  // Firestore may first emit a cached copy from an earlier session. Never let
+  // that stale balance overwrite the server-confirmed student account.
+  if(!sparkShouldApplyServerAccountSnapshot(snap)||!snap.exists)return;
   const d=snap.data(),stu=appState.students.find(x=>x.id===studentId);
   if(stu){
    stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;
@@ -435,6 +454,14 @@ function mergeCloudState(data){
     }
    }
    petFields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(local,k))merged[k]=local[k];});
+   // For the active student, the studentAccounts document is authoritative
+   // for earned/spent points. A classroom roster snapshot can be older and
+   // must not roll the student's displayed balance backwards.
+   if(currentRole==="student"&&remote.id===lockedStudentId){
+    ["score","spentScore"].forEach(k=>{
+     if(Object.prototype.hasOwnProperty.call(local,k))merged[k]=local[k];
+    });
+   }
   } else if(!legacySpendSnapshots.has(remote.id) &&
      (Object.prototype.hasOwnProperty.call(remote,"spentScore")||Array.isArray(remote.spendLogs))){
    legacySpendSnapshots.set(remote.id,{spentScore:Math.max(0,Number(remote.spentScore)||0),spendLogs:Array.isArray(remote.spendLogs)?remote.spendLogs:[]});
@@ -732,7 +759,8 @@ let sparkTeacherAccountsUnsubscribe=null;
 function sparkListenTeacherAccounts(){
  if(sparkTeacherAccountsUnsubscribe)sparkTeacherAccountsUnsubscribe();
  if(!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
- sparkTeacherAccountsUnsubscribe=firestoreDb.collection("studentAccounts").onSnapshot(snapshot=>{
+ sparkTeacherAccountsUnsubscribe=firestoreDb.collection("studentAccounts").onSnapshot({includeMetadataChanges:true},snapshot=>{
+  if(!sparkShouldApplyServerAccountSnapshot(snapshot))return;
   let changed=false;
   snapshot.forEach(doc=>{
    const data=doc.data(),stu=appState.students.find(x=>x.id===doc.id);
