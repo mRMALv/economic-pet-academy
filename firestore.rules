@@ -62,9 +62,22 @@ service cloud.firestore {
     }
 
     match /classrooms/{classroomId} {
-      // The roster is private: teachers and already-bound students only.
+      // The class document contains points and activity, so only teachers and bound students can read it.
       allow read: if isTeacher() || isBoundStudentSession();
       allow create, update, delete: if isTeacher();
+    }
+
+    // The public directory exposes names only, never scores or pet records.
+    match /studentDirectory/{studentId} {
+      allow get, list: if isTeacher() || isAnonymousStudent();
+      allow create, update: if isTeacher()
+        && request.resource.data.keys().hasAll(['name', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.updatedAt is timestamp;
+      allow delete: if isTeacher();
     }
 
     match /studentInvites/{inviteId} {
@@ -98,12 +111,9 @@ service cloud.firestore {
       allow create: if isAnonymousStudent()
         && request.auth.uid == uid
         && !exists(revokedDevicePath(uid))
-        && request.resource.data.keys().hasAll(['studentId', 'inviteId', 'boundAt'])
-        && request.resource.data.keys().hasOnly(['studentId', 'inviteId', 'boundAt'])
+        && request.resource.data.keys().hasAll(['studentId', 'boundAt'])
+        && request.resource.data.keys().hasOnly(['studentId', 'boundAt'])
         && request.resource.data.studentId is string
-        && request.resource.data.inviteId is string
-        && exists(studentInvitePath(request.resource.data.inviteId))
-        && get(studentInvitePath(request.resource.data.inviteId)).data.studentId == request.resource.data.studentId
         && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid
         && isStudentAccountReady(getAfter(accountPath(request.resource.data.studentId)).data);
       allow update, delete: if isTeacher();
@@ -126,10 +136,6 @@ service cloud.firestore {
           && request.resource.data.boundUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['boundUid', 'updatedAt'])
           && getAfter(devicePath(request.auth.uid)).data.studentId == studentId
-          && getAfter(devicePath(request.auth.uid)).data.inviteId is string
-          && exists(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId))
-          && get(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId)).data.studentId == studentId
-          && !existsAfter(studentInvitePath(getAfter(devicePath(request.auth.uid)).data.inviteId))
           && !exists(revokedDevicePath(request.auth.uid))
         )
         || (
