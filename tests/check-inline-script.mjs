@@ -8,7 +8,7 @@ const inlineScripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g
   .filter((source) => source.trim().length > 0);
 
 if (inlineScripts.length !== 1) {
-  throw new Error(\`Expected exactly one inline application script; found \${inlineScripts.length}\`);
+  throw new Error("Expected exactly one inline application script; found " + inlineScripts.length);
 }
 
 new vm.Script(inlineScripts[0], { filename: "index.html inline application script" });
