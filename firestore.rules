@@ -73,9 +73,9 @@ service cloud.firestore {
 
     match /studentAccounts/{studentId} {
       // Anonymous users may only look up an account that is still unbound.
-      allow get: if isTeacher()
-        || isBoundStudent(studentId)
-        || (isAnonymousStudent() && resource.data.boundUid == null);
+      // Students can read only the account bound to their own anonymous UID.
+      // First-time binding is attempted as an atomic write, so unbound accounts need not be readable.
+      allow get: if isTeacher() || isBoundStudent(studentId);
       allow list: if isTeacher();
 
       allow create, delete: if isTeacher();
