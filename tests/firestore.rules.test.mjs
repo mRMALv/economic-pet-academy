@@ -204,3 +204,58 @@ test("teacher can read spend history and student cannot read another student's h
   await assertSucceeds(getDocs(collection(teacherDb(), "studentAccounts", "stu-a", "transactions")));
   await assertFails(getDocs(collection(studentDb(), "studentAccounts", "stu-b", "transactions")));
 });
+
+test("students cannot create their own account or bind without the paired device document", async () => {
+  await seedAccount();
+  const db = studentDb();
+  await assertFails(setDoc(account(db), {
+    studentId: "stu-a", earnedScore: 500, spentScore: 0,
+    boundUid: "student-uid", lastTransactionId: null
+  }));
+  await assertFails(updateDoc(account(db), { boundUid: "student-uid" }));
+});
+
+test("a second anonymous UID cannot claim an already-bound student", async () => {
+  await seedAccount();
+  await bind("first-uid", "stu-a");
+  await assertFails(bind("second-uid", "stu-a"));
+  assert.equal((await getDoc(account(teacherDb()))).data().boundUid, "first-uid");
+});
+
+test("transaction IDs cannot be replayed", async () => {
+  await seedAccount();
+  await bind();
+  await assertSucceeds(spend({ txId: "same-id", amount: 5 }));
+  await assertFails(spend({ txId: "same-id", amount: 5 }));
+  assert.equal((await getDoc(account(studentDb()))).data().spentScore, 5);
+});
+
+test("concurrent spends cannot exceed the available balance", async () => {
+  await seedAccount("stu-a", { earnedScore: 30 });
+  await bind();
+  const results = await Promise.allSettled([
+    spend({ txId: "parallel-a", amount: 20 }),
+    spend({ txId: "parallel-b", amount: 20 })
+  ]);
+  assert.equal(results.filter(x => x.status === "fulfilled").length, 1);
+  assert.equal(results.filter(x => x.status === "rejected").length, 1);
+  assert.equal((await getDoc(account(studentDb()))).data().spentScore, 20);
+});
+
+test("teacher can revoke a device and a new UID can claim the account", async () => {
+  await seedAccount();
+  await bind("old-uid", "stu-a");
+  const admin = teacherDb();
+  const batch = writeBatch(admin);
+  batch.set(doc(admin, "revokedDevices", "old-uid"), {
+    studentId: "stu-a", revokedAt: serverTimestamp()
+  });
+  batch.delete(doc(admin, "devices", "old-uid"));
+  batch.update(account(admin), { boundUid: null });
+  await assertSucceeds(batch.commit());
+
+  await assertFails(bind("old-uid", "stu-a"));
+  await assertSucceeds(bind("new-uid", "stu-a"));
+  assert.equal((await getDoc(account(admin))).data().boundUid, "new-uid");
+});
+
