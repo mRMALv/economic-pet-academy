@@ -48,6 +48,7 @@ async function seedAccount(id = "stu-a", values = {}) {
       studentId: id,
       earnedScore: 30,
       spentScore: 0,
+      legacySpendNeedsReview: false,
       boundUid: null,
       lastTransactionId: null,
       updatedAt: serverTimestamp(),
@@ -129,6 +130,21 @@ test("first device binding must update both device and account atomically", asyn
   const db = studentDb();
   assert.equal((await getDoc(account(db))).data().boundUid, "student-uid");
   assert.equal((await getDoc(doc(db, "devices", "student-uid"))).data().studentId, "stu-a");
+});
+
+test("student cannot bind until teacher reconciles a legacy balance", async () => {
+  await seedAccount("stu-a", { legacySpendNeedsReview: true });
+  await assertFails(bind());
+  await assertSucceeds(updateDoc(account(teacherDb()), { legacySpendNeedsReview: false }));
+  await assertSucceeds(bind());
+});
+
+test("student cannot spend after a teacher flags the balance for review", async () => {
+  await seedAccount();
+  await bind();
+  await assertSucceeds(updateDoc(account(teacherDb()), { legacySpendNeedsReview: true }));
+  await assertFails(spend());
+  assert.equal((await getDoc(account(teacherDb()))).data().spentScore, 0);
 });
 
 test("device cannot bind to a second student or change its existing binding", async () => {
