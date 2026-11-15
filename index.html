@@ -13,10 +13,10 @@ async function sparkEnsureAccounts(){
  if(!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
  for(const stu of appState.students){
   const ref=sparkAccountRef(stu.id),snap=await ref.get();
-  if(!snap.exists)await ref.set({studentId:stu.id,earnedScore:Number(stu.score)||0,spentScore:0,boundUid:null,lastTransactionId:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  if(!snap.exists){await ref.set({studentId:stu.id,earnedScore:Number(stu.score)||0,spentScore:0,boundUid:null,lastTransactionId:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});stu.spentScore=0;}
   else{const d=snap.data();stu.score=Number(d.earnedScore)||0;stu.spentScore=Number(d.spentScore)||0;}
  }
- await classroomRef().set({students:appState.students,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+ await classroomRef().set({students:sparkPublicRoster(appState.students),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
  saveLocalStateOnly();
 }
 async function sparkBindStudent(studentId){
@@ -131,7 +131,7 @@ async function adminAddStudent(){
  if(currentRole!=="teacher"||!isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser))return;
  const input=document.getElementById("admin-new-student-name"),name=input.value.trim();if(!name){showToast("請輸入學生姓名！","Please enter student name!","⚠️");return;}
  const stu={id:"stu_"+Date.now(),name:name,petCreated:false,petId:null,conceptZH:"",conceptEN:"",adjZH:"",adjEN:"",score:0,spentScore:0,hunger:50,cleanliness:50,happiness:60,habitat:"meadow",wishId:"w5",fulfilledCount:0};
- try{await sparkAccountRef(stu.id).set({studentId:stu.id,earnedScore:0,spentScore:0,boundUid:null,lastTransactionId:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});appState.students.push(stu);input.value="";await classroomRef().set({students:appState.students,logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});renderTeacherAdmin();showToast("已新增學生："+name,"Student added","✅");}
+ try{await sparkAccountRef(stu.id).set({studentId:stu.id,earnedScore:0,spentScore:0,boundUid:null,lastTransactionId:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});appState.students.push(stu);input.value="";await classroomRef().set({students:sparkPublicRoster(appState.students),logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});renderTeacherAdmin();showToast("已新增學生："+name,"Student added","✅");}
  catch(e){console.error(e);showToast("新增雲端學生帳戶失敗，請重試","Could not create cloud student account","⚠️");}
 }
 async function adminAdjustScore(id,delta,reason){
@@ -153,7 +153,7 @@ async function adminAdjustScore(id,delta,reason){
    nextLogs.unshift({id:"log_"+Date.now(),studentId:stu.id,studentName:stu.name,delta:nextEarned-earned,reason:reason||"老師評分 Teacher Score",time:time});
    if(nextLogs.length>50)nextLogs.pop();
    tx.update(ref,{earnedScore:nextEarned,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-   tx.set(classRef,{students:nextStudents,logs:nextLogs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+   tx.set(classRef,{students:sparkPublicRoster(nextStudents),logs:nextLogs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
   });
   appState.students=nextStudents;appState.logs=nextLogs;stu.score=nextEarned;saveLocalStateOnly();
   renderTeacherAdmin();showToast(stu.name+" 分數已同步更新","Student score synced",amount>0?"🌟":"📉");
@@ -216,6 +216,19 @@ async function logoutRole(){
  document.getElementById("btn-open-teacher").classList.remove("hidden");document.getElementById("btn-exit-teacher").classList.add("hidden");
  if(wasTeacher&&firebaseAuth&&isVerifiedTeacher(firebaseAuth.currentUser)){try{await firebaseAuth.signOut();await firebaseAuth.signInAnonymously();}catch(e){console.warn("Could not return to anonymous session",e);}}
  switchView("view-landing");renderLandingRoster();showToast("已登出並解除畫面鎖定","Logged out","👋");
+}
+
+
+function sparkPublicRoster(students){
+ return (students||[]).map(stu=>{const copy={...stu};delete copy.spentScore;delete copy.spendLogs;return copy;});
+}
+function persistState(){
+ saveLocalStateOnly();
+ if(currentRole==="teacher"&&isVerifiedTeacher(firebaseAuth&&firebaseAuth.currentUser)&&firestoreDb){
+  classroomRef().set({students:sparkPublicRoster(appState.students),logs:appState.logs,updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+   .then(()=>setSyncStatus("雲端同步正常",true))
+   .catch(e=>{console.error("Cloud save failed",e);showToast("雲端儲存失敗，請檢查連線","Cloud save failed","⚠️");setSyncStatus("雲端儲存錯誤",false);});
+ }
 }
 
 </script>
