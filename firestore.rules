@@ -122,7 +122,8 @@ service cloud.firestore {
           && getAfter(accountPath(studentId)).data.lastTransactionId == transactionId
           && getAfter(accountPath(studentId)).data.spentScore
              == get(accountPath(studentId)).data.spentScore + request.resource.data.amount;
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isTeacher();
       }
     }
   }
