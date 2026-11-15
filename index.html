@@ -283,7 +283,7 @@ async function sparkEnsureAccounts(){
    const localLegacyTotal=localLegacy
     ?Math.max(Number(localLegacy.spentScore)||0,(Array.isArray(localLegacy.spendLogs)?localLegacy.spendLogs:[]).reduce((sum,item)=>sum+Math.max(0,Math.floor(Math.abs(Number(item&&item.delta)||0))),0))
     :0;
-   if(d.migrationVersion!==1||d.legacySpendNeedsReview===true){
+   if(d.migrationVersion!==1||d.legacySpendNeedsReview!==false){
     // Earlier builds could set the review flag just because migration metadata
     // was missing. Clear that false positive when there is no spend evidence.
     const ledger=await ref.collection("transactions").limit(1).get();
