@@ -18,5 +18,5 @@ jobs:
       - name: Summarize dependency audit
         run: |
           npm audit --json > npm-audit.json || true
-          node -e 'const a=require("./npm-audit.json"); console.log("Audit totals:", JSON.stringify(a.metadata?.vulnerabilities||{})); for (const [name,v] of Object.entries(a.vulnerabilities||{})) console.log(name+" | "+v.severity+" | direct="+v.isDirect+" | fix="+JSON.stringify(v.fixAvailable));'
+          node -e 'const a=require("./npm-audit.json"); console.log("Audit totals:", JSON.stringify(a.metadata?.vulnerabilities||{})); for (const [name,v] of Object.entries(a.vulnerabilities||{})) { const via=(v.via||[]).map(x=>typeof x==="string"?x:{title:x.title,url:x.url,range:x.range}); console.log(name+" | "+v.severity+" | direct="+v.isDirect+" | range="+v.range+" | via="+JSON.stringify(via)+" | fix="+JSON.stringify(v.fixAvailable)); }'
       - run: npm run test:rules
