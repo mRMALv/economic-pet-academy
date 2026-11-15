@@ -32,3 +32,35 @@ jobs:
         run: npm run test:syntax
       - name: Test Firestore security rules
         run: npm run test:rules
+
+  deploy-firestore-rules:
+    name: Deploy Firestore Rules after passing tests
+    needs: firestore-rules
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/secure-student-points'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check whether Firebase deployment credentials are configured
+        id: firebase-credentials
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Firebase deployment credential is configured."
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Firestore rules were not deployed. Add the repository secret FIREBASE_SERVICE_ACCOUNT_ECON_PET with a Firebase service-account JSON that has Firestore Rules deployment permission."
+          fi
+      - name: Authenticate to Google Cloud
+        if: steps.firebase-credentials.outputs.configured == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ECON_PET }}
+      - name: Deploy Firestore Rules to econ-pet
+        if: steps.firebase-credentials.outputs.configured == 'true'
+        run: npx --yes firebase-tools@15.36.0 deploy --only firestore:rules --project econ-pet --non-interactive
+      - name: Record that deployment was skipped
+        if: steps.firebase-credentials.outputs.configured != 'true'
+        run: echo "No production deployment performed; GitHub secret FIREBASE_SERVICE_ACCOUNT_ECON_PET is required."
