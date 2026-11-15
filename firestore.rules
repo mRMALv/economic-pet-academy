@@ -153,6 +153,48 @@ service cloud.firestore {
              == request.resource.data.spentScore - resource.data.spentScore
           && getAfter(/databases/$(database)/documents/studentAccounts/$(studentId)/transactions/$(request.resource.data.lastTransactionId)).data.uid
              == request.auth.uid
+        )
+        || (
+          isBoundStudent(studentId)
+          && isStudentAccountReady(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'petCreated', 'petId', 'conceptZH', 'conceptEN', 'adjZH', 'adjEN',
+            'hunger', 'cleanliness', 'happiness', 'habitat', 'wishId',
+            'fulfilledCount', 'profileUpdatedAt'
+          ])
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.earnedScore == resource.data.earnedScore
+          && request.resource.data.spentScore == resource.data.spentScore
+          && request.resource.data.boundUid == resource.data.boundUid
+          && request.resource.data.lastTransactionId == resource.data.lastTransactionId
+          && request.resource.data.migrationVersion == resource.data.migrationVersion
+          && request.resource.data.legacySpendNeedsReview == resource.data.legacySpendNeedsReview
+          && request.resource.data.petCreated is bool
+          && (request.resource.data.petId == null || request.resource.data.petId is string)
+          && request.resource.data.conceptZH is string
+          && request.resource.data.conceptZH.size() <= 60
+          && request.resource.data.conceptEN is string
+          && request.resource.data.conceptEN.size() <= 60
+          && request.resource.data.adjZH is string
+          && request.resource.data.adjZH.size() <= 60
+          && request.resource.data.adjEN is string
+          && request.resource.data.adjEN.size() <= 60
+          && request.resource.data.hunger is int
+          && request.resource.data.hunger >= 0
+          && request.resource.data.hunger <= 100
+          && request.resource.data.cleanliness is int
+          && request.resource.data.cleanliness >= 0
+          && request.resource.data.cleanliness <= 100
+          && request.resource.data.happiness is int
+          && request.resource.data.happiness >= 0
+          && request.resource.data.happiness <= 100
+          && request.resource.data.habitat is string
+          && request.resource.data.habitat.size() <= 24
+          && request.resource.data.wishId is string
+          && request.resource.data.wishId.size() <= 40
+          && request.resource.data.fulfilledCount is int
+          && request.resource.data.fulfilledCount >= 0
+          && request.resource.data.profileUpdatedAt is timestamp
         );
 
       match /transactions/{transactionId} {
