@@ -162,17 +162,19 @@ async function sparkEnsureAccounts(){
    const loggedTotal=logs.reduce((sum,x)=>sum+Math.max(0,Math.floor(Math.abs(Number(x&&x.delta)||0))),0);
    const requested=legacy?Math.max(Math.floor(Number(legacy.spentScore)||0),loggedTotal):0;
    const spent=Math.min(earned,requested);
-   await ref.set({
+   // Account and its import ledger are committed atomically so a retry cannot
+   // leave a migrated balance without its corresponding audit records.
+   let remaining=spent,seq=0;
+   const migrationBatch=firestoreDb.batch();
+   migrationBatch.set(ref,{
     studentId:stu.id,earnedScore:earned,spentScore:spent,boundUid:null,lastTransactionId:null,
-    legacySpendNeedsReview:!legacy&&earned>0 || requested>earned,
+    legacySpendNeedsReview:(!legacy&&earned>0)||requested>earned,
     legacySpendOverflow:Math.max(0,requested-spent),
     legacySpendSource:legacy?"teacher-browser-local-data":"not-found-on-teacher-device",
     migrationVersion:1,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
    });
-   // Import whatever legacy detail is present as teacher-created, read-only ledger entries.
-   let remaining=spent,seq=0,batch=firestoreDb.batch(),writes=0;
-   for(const entry of logs){
+   for(const entry of logs.slice(0,100)){
     if(remaining<=0)break;
     const amount=Math.min(remaining,Math.max(0,Math.floor(Math.abs(Number(entry&&entry.delta)||0))));
     if(!amount)continue;
@@ -181,22 +183,20 @@ async function sparkEnsureAccounts(){
     const createdAt=Number.isFinite(rawTime)&&rawTime>0
       ?firebase.firestore.Timestamp.fromMillis(rawTime)
       :firebase.firestore.Timestamp.now();
-    batch.set(ref.collection("transactions").doc(id),{
+    migrationBatch.set(ref.collection("transactions").doc(id),{
      studentId:stu.id,uid:"legacy-import",action:"legacy_import",amount,
      reason:("舊版紀錄匯入："+String(entry&&entry.reason||"舊消費紀錄")).slice(0,120),
      createdAt
     });
-    remaining-=amount;writes++;
-    if(writes>=400){await batch.commit();batch=firestoreDb.batch();writes=0;}
+    remaining-=amount;
    }
    if(remaining>0){
-    batch.set(ref.collection("transactions").doc("legacy_carryover"),{
+    migrationBatch.set(ref.collection("transactions").doc("legacy_carryover"),{
      studentId:stu.id,uid:"legacy-import",action:"legacy_import",amount:remaining,
      reason:"舊版累計消費餘額（沒有足夠逐筆紀錄）",createdAt:firebase.firestore.Timestamp.now()
     });
-    writes++;
    }
-   if(writes)await batch.commit();
+   await migrationBatch.commit();
    stu.spentScore=spent;
    legacySpendSnapshots.delete(stu.id);
   }else{
