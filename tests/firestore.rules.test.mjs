@@ -219,6 +219,41 @@ test("student cannot spend more than the available balance", async () => {
   await assertFails(spend({ amount: 5 }));
 });
 
+test("bound student can save pet profile fields and teacher can read them", async () => {
+  await seedAccount("stu-a");
+  await bind();
+  const db = studentDb();
+  await assertSucceeds(updateDoc(account(db), {
+    petCreated: true, petId: "fox",
+    conceptZH: "機會成本", conceptEN: "Opportunity Cost",
+    adjZH: "精明的", adjEN: "Savvy",
+    hunger: 72, cleanliness: 65, happiness: 90,
+    habitat: "meadow", wishId: "w5", fulfilledCount: 2,
+    profileUpdatedAt: serverTimestamp()
+  }));
+  const saved = (await getDoc(account(teacherDb()))).data();
+  assert.equal(saved.petCreated, true);
+  assert.equal(saved.petId, "fox");
+  assert.equal(saved.hunger, 72);
+  assert.equal(saved.fulfilledCount, 2);
+});
+
+test("student profile writes cannot change scores or another student's account", async () => {
+  await seedAccount("stu-a");
+  await seedAccount("stu-b");
+  await bind();
+  const db = studentDb();
+  await assertFails(updateDoc(account(db), {
+    petCreated: true, petId: "fox", earnedScore: 999,
+    conceptZH: "", conceptEN: "", adjZH: "", adjEN: "",
+    hunger: 50, cleanliness: 50, happiness: 50,
+    habitat: "meadow", wishId: "w5", fulfilledCount: 0,
+    profileUpdatedAt: serverTimestamp()
+  }));
+  await assertFails(getDoc(account(db, "stu-b")));
+  await assertFails(updateDoc(account(db, "stu-b"), {petCreated: true, petId: "fox"}));
+});
+
 test("student cannot forge earned score or change another account", async () => {
   await seedAccount("stu-a");
   await seedAccount("stu-b");
