@@ -49,6 +49,7 @@ async function seedAccount(id = "stu-a", values = {}) {
       earnedScore: 30,
       spentScore: 0,
       legacySpendNeedsReview: false,
+      migrationVersion: 1,
       boundUid: null,
       lastTransactionId: null,
       updatedAt: serverTimestamp(),
@@ -131,6 +132,18 @@ test("first device binding must update both device and account atomically", asyn
   assert.equal((await getDoc(account(db))).data().boundUid, "student-uid");
   assert.equal((await getDoc(doc(db, "devices", "student-uid"))).data().studentId, "stu-a");
 });
+
+test("account without migration metadata cannot be bound", async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), "studentAccounts", "stu-a"), {
+      studentId: "stu-a", earnedScore: 30, spentScore: 0,
+      boundUid: null, lastTransactionId: null
+    });
+  });
+  await assertFails(bind());
+});
+
+
 
 test("student cannot bind until teacher reconciles a legacy balance", async () => {
   await seedAccount("stu-a", { legacySpendNeedsReview: true });
