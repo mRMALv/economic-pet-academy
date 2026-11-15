@@ -1,0 +1,206 @@
+import fs from "node:fs";
+import test, { before, after, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+import {
+  initializeTestEnvironment,
+  assertFails,
+  assertSucceeds
+} from "@firebase/rules-unit-testing";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  runTransaction,
+  serverTimestamp
+} from "firebase/firestore";
+
+const PROJECT_ID = "demo-econ-pet";
+const RULES = fs.readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
+let env;
+
+const teacherClaims = {
+  email: "mariannamangyh@gmail.com",
+  email_verified: true,
+  firebase: { sign_in_provider: "password" }
+};
+const anonClaims = { firebase: { sign_in_provider: "anonymous" } };
+
+function studentDb(uid = "student-uid") {
+  return env.authenticatedContext(uid, anonClaims).firestore();
+}
+function teacherDb() {
+  return env.authenticatedContext("teacher-uid", teacherClaims).firestore();
+}
+function account(db, id = "stu-a") {
+  return doc(db, "studentAccounts", id);
+}
+function ledger(db, id = "stu-a", txId = "tx-1") {
+  return doc(db, "studentAccounts", id, "transactions", txId);
+}
+async function seedAccount(id = "stu-a", values = {}) {
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), "studentAccounts", id), {
+      studentId: id,
+      earnedScore: 30,
+      spentScore: 0,
+      boundUid: null,
+      lastTransactionId: null,
+      updatedAt: serverTimestamp(),
+      ...values
+    });
+  });
+}
+async function bind(uid = "student-uid", studentId = "stu-a") {
+  const db = studentDb(uid);
+  const batch = writeBatch(db);
+  batch.set(doc(db, "devices", uid), {
+    studentId,
+    boundAt: serverTimestamp()
+  });
+  batch.update(account(db, studentId), {
+    boundUid: uid,
+    updatedAt: serverTimestamp()
+  });
+  await batch.commit();
+}
+async function spend({ uid = "student-uid", studentId = "stu-a", txId = "tx-1", action = "feed", amount = 5 } = {}) {
+  const db = studentDb(uid);
+  const accountRef = account(db, studentId);
+  await runTransaction(db, async transaction => {
+    const snapshot = await transaction.get(accountRef);
+    const data = snapshot.data();
+    transaction.update(accountRef, {
+      spentScore: data.spentScore + amount,
+      lastTransactionId: txId,
+      updatedAt: serverTimestamp()
+    });
+    transaction.set(ledger(db, studentId, txId), {
+      studentId,
+      uid,
+      action,
+      amount,
+      reason: "test spend",
+      createdAt: serverTimestamp()
+    });
+  });
+}
+
+before(async () => {
+  env = await initializeTestEnvironment({
+    projectId: PROJECT_ID,
+    firestore: { host: "127.0.0.1", port: 8080, rules: RULES }
+  });
+});
+beforeEach(async () => {
+  await env.clearFirestore();
+});
+after(async () => {
+  await env.cleanup();
+});
+
+test("anonymous students can read the classroom roster but cannot write it", async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), "classrooms", "economic-pet-academy"), {
+      students: [{ id: "stu-a", name: "Student A" }]
+    });
+  });
+  const db = studentDb();
+  await assertSucceeds(getDoc(doc(db, "classrooms", "economic-pet-academy")));
+  await assertFails(updateDoc(doc(db, "classrooms", "economic-pet-academy"), { students: [] }));
+});
+
+test("teacher can create and manage student accounts", async () => {
+  const db = teacherDb();
+  await assertSucceeds(setDoc(account(db), {
+    studentId: "stu-a", earnedScore: 20, spentScore: 0,
+    boundUid: null, lastTransactionId: null
+  }));
+  await assertSucceeds(updateDoc(account(db), { earnedScore: 25 }));
+});
+
+test("first device binding must update both device and account atomically", async () => {
+  await seedAccount();
+  await assertSucceeds(bind());
+  const db = studentDb();
+  assert.equal((await getDoc(account(db))).data().boundUid, "student-uid");
+  assert.equal((await getDoc(doc(db, "devices", "student-uid"))).data().studentId, "stu-a");
+});
+
+test("device cannot bind to a second student or change its existing binding", async () => {
+  await seedAccount("stu-a");
+  await seedAccount("stu-b");
+  await bind("student-uid", "stu-a");
+  const db = studentDb();
+  const batch = writeBatch(db);
+  batch.update(account(db, "stu-a"), { boundUid: null });
+  batch.set(doc(db, "devices", "student-uid"), { studentId: "stu-b", boundAt: serverTimestamp() });
+  await assertFails(batch.commit());
+});
+
+test("student can atomically spend an allowed amount and create its ledger record", async () => {
+  await seedAccount();
+  await bind();
+  await assertSucceeds(spend());
+  const db = studentDb();
+  assert.equal((await getDoc(account(db))).data().spentScore, 5);
+  assert.equal((await getDoc(ledger(db))).data().amount, 5);
+});
+
+test("student cannot spend more than the available balance", async () => {
+  await seedAccount("stu-a", { earnedScore: 4 });
+  await bind();
+  await assertFails(spend({ amount: 5 }));
+});
+
+test("student cannot forge earned score or change another account", async () => {
+  await seedAccount("stu-a");
+  await seedAccount("stu-b");
+  await bind();
+  const db = studentDb();
+  await assertFails(updateDoc(account(db), { earnedScore: 999 }));
+  await assertFails(getDoc(account(db, "stu-b")));
+});
+
+test("invalid action amount and ledger-only writes are rejected", async () => {
+  await seedAccount();
+  await bind();
+  const db = studentDb();
+  await assertFails(spend({ action: "feed", amount: 999 }));
+  await assertFails(setDoc(ledger(db), {
+    studentId: "stu-a", uid: "student-uid", action: "feed",
+    amount: 5, reason: "forged", createdAt: serverTimestamp()
+  }));
+});
+
+test("transaction records cannot be edited or deleted by students", async () => {
+  await seedAccount();
+  await bind();
+  await spend();
+  const db = studentDb();
+  await assertFails(updateDoc(ledger(db), { amount: 1 }));
+  await assertFails(deleteDoc(ledger(db)));
+});
+
+test("a revoked device cannot bind again", async () => {
+  await seedAccount("stu-a");
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), "revokedDevices", "student-uid"), {
+      studentId: "stu-a"
+    });
+  });
+  await assertFails(bind());
+});
+
+test("teacher can read spend history and student cannot read another student's history", async () => {
+  await seedAccount("stu-a");
+  await seedAccount("stu-b");
+  await bind("student-uid", "stu-a");
+  await spend();
+  await assertSucceeds(getDocs(collection(teacherDb(), "studentAccounts", "stu-a", "transactions")));
+  await assertFails(getDocs(collection(studentDb(), "studentAccounts", "stu-b", "transactions")));
+});
