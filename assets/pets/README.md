@@ -1,22 +1,18 @@
 # Pet image assets
 
-The application loads one square PNG portrait for each existing pet ID from `assets/pets/<id>.png`.
+The application loads one optimized sprite sheet: `assets/pets/pet-sprite.jpg`.
 
-Required filenames:
+The sheet is a 4-column × 3-row grid. Each cell is 160 × 160 pixels. The
+`PET_SPRITE_POSITIONS` map in `index.html` maps existing pet IDs to grid
+coordinates; keep the map and sheet in the same order when replacing artwork.
 
-- `alien.png` — 三眼仔 / Three-Eyed Alien
-- `totoro.png` — 龍貓 / Totoro
-- `flyingsquirrel.png` — 飛鼠 / Flying Squirrel
-- `fox.png` — 狐狸 / Fox
-- `hedgehog.png` — 刺蝟 / Hedgehog
-- `rabbit.png` — 兔子 / Rabbit
-- `hamster.png` — 倉鼠 / Hamster
-- `shiba.png` — 柴犬 / Shiba Inu
-- `cat.png` — 橘貓 / Orange Cat
-- `panda.png` — 熊貓 / Panda
-- `penguin.png` — 企鵝 / Penguin
-- `capybara.png` — 水豚 / Capybara
+| Row | Column 1 | Column 2 | Column 3 | Column 4 |
+|---|---|---|---|---|
+| 1 | 三眼仔 / Alien | 森林精靈 / Forest pet | 飛鼠 / Flying squirrel | 狐狸 / Fox |
+| 2 | 刺蝟 / Hedgehog | 兔子 / Rabbit | 倉鼠 / Hamster | 柴犬 / Shiba Inu |
+| 3 | 橘貓 / Cat | 熊貓 / Panda | 企鵝 / Penguin | 水豚 / Capybara |
 
-Use consistent square crops and the same illustration style for all 12 portraits. Until those PNG files are placed here, the UI uses the original emoji as a fallback so no avatar appears broken.
-
-The generated 12-character artwork from the ChatGPT conversation is not present in this repository or among the files accessible to this editing session. This README records the asset mapping without inventing replacement artwork. Add the individual cropped files here when the original generated sheet is supplied as a file.
+Eight illustrations are cropped from the supplied original 4 × 3 mascot sheet.
+The four additional illustrations (Shiba Inu, fox, capybara, and forest pet)
+were created to match the existing species without relabeling unrelated
+animals. The forest pet is an original fluffy forest creature.

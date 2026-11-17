@@ -72,9 +72,11 @@ const PET_SPECIES=[
 {id:"penguin",nameZH:"企鵝",nameEN:"Penguin",emoji:"🐧",personality:"乖巧"},
 {id:"capybara",nameZH:"水豚",nameEN:"Capybara",emoji:"🦫",personality:"佛系"}
 ];
+const PET_SPRITE_POSITIONS={"alien":[0,0],"totoro":[1,0],"flyingsquirrel":[2,0],"fox":[3,0],"hedgehog":[0,1],"rabbit":[1,1],"hamster":[2,1],"shiba":[3,1],"cat":[0,2],"panda":[1,2],"penguin":[2,2],"capybara":[3,2]};
 function petAvatarHTML(pet,sizeClass="w-16 h-16 text-5xl"){
  const chosen=PET_SPECIES.some(item=>item.id===pet?.id)?pet:PET_SPECIES[0];
- return `<span class="inline-flex shrink-0 items-center justify-center ${sizeClass}" role="img" aria-label="${escapeHTML(chosen.nameZH)}"><img src="assets/pets/${chosen.id}.png" alt="${escapeHTML(chosen.nameZH)}" class="w-full h-full object-contain" loading="lazy" onerror="this.onerror=null;this.parentElement.textContent='${chosen.emoji}'"></span>`;
+ const [spriteCol,spriteRow]=PET_SPRITE_POSITIONS[chosen.id]||[0,0];
+ return `<span class="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl ${sizeClass}" role="img" aria-label="${escapeHTML(chosen.nameZH)}"><img src="assets/pets/pet-sprite.jpg" alt="" aria-hidden="true" class="absolute max-w-none" style="width:400%;height:300%;left:-${spriteCol*100}%;top:-${spriteRow*100}%;" loading="lazy" onerror="this.onerror=null;this.parentElement.textContent='${chosen.emoji}'"></span>`;
 }
 const PERSONALITIES={
 "傲嬌":{low:"哼！快去舉手答題賺分數買吃的給我！",high:"勉、勉強讓你摸一下吧…看在你這麼認真的份上！",feed:"這頓大餐還算合格啦！",bathe:"洗完香香的心情還不賴～",play:"下次也要拿高分陪我玩喔！"},
