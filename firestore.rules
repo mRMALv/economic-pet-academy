@@ -160,7 +160,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'petCreated', 'petId', 'conceptZH', 'conceptEN', 'adjZH', 'adjEN',
             'hunger', 'cleanliness', 'happiness', 'habitat', 'wishId',
-            'fulfilledCount', 'profileUpdatedAt'
+            'fulfilledCount', 'companionPetId', 'outfitId', 'adventureCount', 'birthdayPartyCount', 'photoCount', 'profileUpdatedAt'
           ])
           && request.resource.data.studentId == resource.data.studentId
           && request.resource.data.earnedScore == resource.data.earnedScore
@@ -194,6 +194,14 @@ service cloud.firestore {
           && request.resource.data.wishId.size() <= 40
           && request.resource.data.fulfilledCount is int
           && request.resource.data.fulfilledCount >= 0
+          && (request.resource.data.companionPetId == null || (request.resource.data.companionPetId is string && request.resource.data.companionPetId.size() <= 40))
+          && (request.resource.data.outfitId == null || (request.resource.data.outfitId is string && request.resource.data.outfitId.size() <= 40))
+          && request.resource.data.adventureCount is int
+          && request.resource.data.adventureCount >= 0
+          && request.resource.data.birthdayPartyCount is int
+          && request.resource.data.birthdayPartyCount >= 0
+          && request.resource.data.photoCount is int
+          && request.resource.data.photoCount >= 0
           && request.resource.data.profileUpdatedAt is timestamp
         );
 

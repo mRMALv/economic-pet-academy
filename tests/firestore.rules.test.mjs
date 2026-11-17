@@ -229,6 +229,8 @@ test("bound student can save pet profile fields and teacher can read them", asyn
     adjZH: "精明的", adjEN: "Savvy",
     hunger: 72, cleanliness: 65, happiness: 90,
     habitat: "meadow", wishId: "w5", fulfilledCount: 2,
+    companionPetId: "penguin", outfitId: "star-cape",
+    adventureCount: 1, birthdayPartyCount: 2, photoCount: 4,
     profileUpdatedAt: serverTimestamp()
   }));
   const saved = (await getDoc(account(teacherDb()))).data();
@@ -236,6 +238,11 @@ test("bound student can save pet profile fields and teacher can read them", asyn
   assert.equal(saved.petId, "fox");
   assert.equal(saved.hunger, 72);
   assert.equal(saved.fulfilledCount, 2);
+  assert.equal(saved.companionPetId, "penguin");
+  assert.equal(saved.outfitId, "star-cape");
+  assert.equal(saved.adventureCount, 1);
+  assert.equal(saved.birthdayPartyCount, 2);
+  assert.equal(saved.photoCount, 4);
 });
 
 test("student profile writes cannot change scores or another student's account", async () => {
@@ -248,10 +255,28 @@ test("student profile writes cannot change scores or another student's account",
     conceptZH: "", conceptEN: "", adjZH: "", adjEN: "",
     hunger: 50, cleanliness: 50, happiness: 50,
     habitat: "meadow", wishId: "w5", fulfilledCount: 0,
+    companionPetId: "penguin", outfitId: "star-cape",
+    adventureCount: 0, birthdayPartyCount: 0, photoCount: 0,
     profileUpdatedAt: serverTimestamp()
   }));
   await assertFails(getDoc(account(db, "stu-b")));
   await assertFails(updateDoc(account(db, "stu-b"), {petCreated: true, petId: "fox"}));
+});
+
+test("student cannot write invalid premium pet profile values", async () => {
+  await seedAccount("stu-a");
+  await bind();
+  const db = studentDb();
+  await assertFails(updateDoc(account(db), {
+    petCreated: true, petId: "fox",
+    conceptZH: "機會成本", conceptEN: "Opportunity Cost",
+    adjZH: "精明的", adjEN: "Savvy",
+    hunger: 50, cleanliness: 50, happiness: 50,
+    habitat: "meadow", wishId: "w5", fulfilledCount: 0,
+    companionPetId: { invalid: true }, outfitId: "star-cape",
+    adventureCount: -1, birthdayPartyCount: 0, photoCount: 0,
+    profileUpdatedAt: serverTimestamp()
+  }));
 });
 
 test("student cannot forge earned score or change another account", async () => {
