@@ -86,8 +86,9 @@ if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wi
 if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
   throw new Error("Every wish must have bilingual titles and a positive integer point cost");
 }
-if (!inlineScripts[0].includes('assets/pets/pet-sprite.jpg')) {
-  throw new Error("Pet avatar renderer must load the shared pet sprite sheet");
+if (!inlineScripts[0].includes('assets/pets/pet-sprite-hd.webp') ||
+    !inlineScripts[0].includes('assets/pets/flyingsquirrel.webp')) {
+  throw new Error("Pet avatar renderer must load the HD sprite sheet and standalone Flying Squirrel image");
 }
 
 if (!inlineScripts[0].includes('assets/pets/flyingsquirrel.webp')) {
@@ -99,9 +100,17 @@ if (flyingSquirrelFile.length < 10000 ||
     flyingSquirrelFile.toString("ascii", 8, 12) !== "WEBP") {
   throw new Error("Flying Squirrel image must be a valid high-resolution WebP asset");
 }
-const spriteFile = fs.readFileSync(new URL("../assets/pets/pet-sprite.jpg", import.meta.url));
-if (spriteFile.length < 9000 || spriteFile[0] !== 0xff || spriteFile[1] !== 0xd8 || spriteFile[2] !== 0xff) {
-  throw new Error("Pet sprite sheet must be a complete optimized JPEG image");
+const spriteFile = fs.readFileSync(new URL("../assets/pets/pet-sprite-hd.webp", import.meta.url));
+if (spriteFile.length < 300000 ||
+    spriteFile.toString("ascii", 0, 4) !== "RIFF" ||
+    spriteFile.toString("ascii", 8, 12) !== "WEBP" ||
+    spriteFile.toString("ascii", 12, 16) !== "VP8X") {
+  throw new Error("HD pet sprite sheet must be a valid high-resolution WebP image");
+}
+const spriteWidth = 1 + spriteFile[24] + (spriteFile[25] << 8) + (spriteFile[26] << 16);
+const spriteHeight = 1 + spriteFile[27] + (spriteFile[28] << 8) + (spriteFile[29] << 16);
+if (spriteWidth !== 2048 || spriteHeight !== 1536) {
+  throw new Error("HD pet sprite sheet must contain twelve 512 × 512 cells");
 }
 
 const spriteMapMatch = inlineScripts[0].match(/const PET_SPRITE_POSITIONS=(\{[\s\S]*?\});/);

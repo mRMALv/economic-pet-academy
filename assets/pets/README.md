@@ -1,12 +1,17 @@
 # Pet image assets
 
-Most pets are displayed from the shared optimized sprite sheet:
-`assets/pets/pet-sprite.jpg` (4 columns × 3 rows).
+The eleven pets other than the Flying Squirrel use the high-resolution shared
+sprite sheet `assets/pets/pet-sprite-hd.webp`.
 
-The Flying Squirrel uses a dedicated high-resolution 512 × 512 transparent
-WebP image: `assets/pets/flyingsquirrel.webp`. This prevents its wide ears
-and gliding membranes from being clipped by the sprite-cell crop.
+- Canvas: 2048 × 1536 pixels
+- Grid: 4 columns × 3 rows
+- Each pet cell: 512 × 512 pixels
+- Format: WebP with transparency
 
-The `PET_SPRITE_POSITIONS` map in `index.html` retains the existing 12 pet
-IDs and locations for the shared sheet. Keep the Flying Squirrel override in
-`petAvatarHTML` when updating the renderer.
+Cell order matches `PET_SPRITE_POSITIONS` in `index.html`:
+Alien, forest pet (Totoro), Flying Squirrel, Fox, Hedgehog, Rabbit, Hamster,
+Shiba Inu, Cat, Panda, Penguin, Capybara.
+
+The Flying Squirrel continues to use its separate full-resolution artwork at
+`assets/pets/flyingsquirrel.webp` so its ear tips and gliding membranes are
+not cropped. Keep the existing emoji fallback in the avatar renderer.
