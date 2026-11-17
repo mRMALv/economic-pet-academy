@@ -89,8 +89,6 @@ if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish
 if (!inlineScripts[0].includes('src="assets/pets/${chosen.id}.png"')) {
   throw new Error("Pet avatar renderer must load per-species image files");
 }
-  throw new Error("Pet avatar renderer must load per-species image files");
-}
 if (!inlineScripts[0].includes('id:"alien",nameZH:"三眼仔"') ||
     !inlineScripts[0].includes('id:"flyingsquirrel",nameZH:"飛鼠"')) {
   throw new Error("Three-Eyed Alien and Flying Squirrel species must remain available");
