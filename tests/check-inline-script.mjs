@@ -86,7 +86,7 @@ if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wi
 if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
   throw new Error("Every wish must have bilingual titles and a positive integer point cost");
 }
-if (!inlineScripts[0].includes('src="assets/pets/pet-sprite.jpg"')) {
+if (!inlineScripts[0].includes('assets/pets/pet-sprite.jpg')) {
   throw new Error("Pet avatar renderer must load the shared pet sprite sheet");
 }
 
