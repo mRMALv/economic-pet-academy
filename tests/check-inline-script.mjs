@@ -86,8 +86,28 @@ if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wi
 if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
   throw new Error("Every wish must have bilingual titles and a positive integer point cost");
 }
-if (!inlineScripts[0].includes('src="assets/pets/${chosen.id}.png"')) {
-  throw new Error("Pet avatar renderer must load per-species image files");
+if (!inlineScripts[0].includes('src="assets/pets/pet-sprite.jpg"')) {
+  throw new Error("Pet avatar renderer must load the shared pet sprite sheet");
+}
+const spriteFile = fs.readFileSync(new URL("../assets/pets/pet-sprite.jpg", import.meta.url));
+if (spriteFile.length < 9000 || spriteFile[0] !== 0xff || spriteFile[1] !== 0xd8 || spriteFile[2] !== 0xff) {
+  throw new Error("Pet sprite sheet must be a complete optimized JPEG image");
+}
+
+const spriteMapMatch = inlineScripts[0].match(/const PET_SPRITE_POSITIONS=(\{[\s\S]*?\});/);
+if (!spriteMapMatch) throw new Error("Could not locate pet sprite positions");
+const spriteMap = vm.runInNewContext("(" + spriteMapMatch[1] + ")");
+const spriteIds = ["alien","totoro","flyingsquirrel","fox","hedgehog","rabbit","hamster","shiba","cat","panda","penguin","capybara"];
+const spriteCells = new Set();
+spriteIds.forEach((id,index) => {
+  const position = spriteMap[id];
+  if (!Array.isArray(position) || position[0] !== index % 4 || position[1] !== Math.floor(index / 4)) {
+    throw new Error("Pet sprite position is missing or incorrect for " + id);
+  }
+  spriteCells.add(position.join(":"));
+});
+if (spriteCells.size !== 12 || Object.keys(spriteMap).length !== 12) {
+  throw new Error("Every pet must use one unique sprite cell");
 }
 if (!inlineScripts[0].includes('id:"alien",nameZH:"三眼仔"') ||
     !inlineScripts[0].includes('id:"flyingsquirrel",nameZH:"飛鼠"')) {
