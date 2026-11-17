@@ -75,11 +75,8 @@ const PET_SPECIES=[
 const PET_SPRITE_POSITIONS={"alien":[0,0],"totoro":[1,0],"flyingsquirrel":[2,0],"fox":[3,0],"hedgehog":[0,1],"rabbit":[1,1],"hamster":[2,1],"shiba":[3,1],"cat":[0,2],"panda":[1,2],"penguin":[2,2],"capybara":[3,2]};
 function petAvatarHTML(pet,sizeClass="w-16 h-16 text-5xl"){
  const chosen=PET_SPECIES.some(item=>item.id===pet?.id)?pet:PET_SPECIES[0];
- const isFlyingSquirrel=chosen.id==="flyingsquirrel";
- const imageSrc=isFlyingSquirrel?"assets/pets/flyingsquirrel.webp":"assets/pets/pet-sprite.jpg";
- const imageClass=isFlyingSquirrel?"w-full h-full object-contain":"absolute max-w-none";
- const imageStyle=isFlyingSquirrel?"":`width:400%;height:300%;left:-${(PET_SPRITE_POSITIONS[chosen.id]||[0,0])[0]*100}%;top:-${(PET_SPRITE_POSITIONS[chosen.id]||[0,0])[1]*100}%;`;
- return `<span class="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl ${sizeClass}" role="img" aria-label="${escapeHTML(chosen.nameZH)}"><img src="${imageSrc}" alt="" aria-hidden="true" class="${imageClass}" style="${imageStyle}" loading="lazy" onerror="this.onerror=null;this.parentElement.textContent='${chosen.emoji}'"></span>`;
+ const imageSrc=`assets/pets/${chosen.id}.webp`;
+ return `<span class="relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl ${sizeClass}" role="img" aria-label="${escapeHTML(chosen.nameZH)}"><img src="${imageSrc}" alt="" aria-hidden="true" class="w-full h-full object-contain" loading="lazy" onerror="this.onerror=null;this.parentElement.textContent='${chosen.emoji}'"></span>`;
 }
 const PERSONALITIES={
 "傲嬌":{low:"哼！快去舉手答題賺分數買吃的給我！",high:"勉、勉強讓你摸一下吧…看在你這麼認真的份上！",feed:"這頓大餐還算合格啦！",bathe:"洗完香香的心情還不賴～",play:"下次也要拿高分陪我玩喔！"},

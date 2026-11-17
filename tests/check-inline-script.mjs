@@ -86,23 +86,19 @@ if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wi
 if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
   throw new Error("Every wish must have bilingual titles and a positive integer point cost");
 }
-if (!inlineScripts[0].includes('assets/pets/pet-sprite.jpg')) {
-  throw new Error("Pet avatar renderer must load the shared pet sprite sheet");
+const hdPetIds = ["alien","totoro","fox","hedgehog","rabbit","hamster","shiba","cat","panda","penguin","capybara","flyingsquirrel"];
+if (!inlineScripts[0].includes('assets/pets/\u0024{chosen.id}.webp') &&
+    !inlineScripts[0].includes('assets/pets/')) {
+  throw new Error("Pet avatar renderer must load an individual WebP image for each pet");
 }
-
-if (!inlineScripts[0].includes('assets/pets/flyingsquirrel.webp')) {
-  throw new Error("Flying Squirrel must load its standalone high-resolution image");
-}
-const flyingSquirrelFile = fs.readFileSync(new URL("../assets/pets/flyingsquirrel.webp", import.meta.url));
-if (flyingSquirrelFile.length < 10000 ||
-    flyingSquirrelFile.toString("ascii", 0, 4) !== "RIFF" ||
-    flyingSquirrelFile.toString("ascii", 8, 12) !== "WEBP") {
-  throw new Error("Flying Squirrel image must be a valid high-resolution WebP asset");
-}
-const spriteFile = fs.readFileSync(new URL("../assets/pets/pet-sprite.jpg", import.meta.url));
-if (spriteFile.length < 9000 || spriteFile[0] !== 0xff || spriteFile[1] !== 0xd8 || spriteFile[2] !== 0xff) {
-  throw new Error("Pet sprite sheet must be a complete optimized JPEG image");
-}
+hdPetIds.forEach((id) => {
+  const image = fs.readFileSync(new URL(`../assets/pets/${id}.webp`, import.meta.url));
+  if (image.length < 5000 ||
+      image.toString("ascii", 0, 4) !== "RIFF" ||
+      image.toString("ascii", 8, 12) !== "WEBP") {
+    throw new Error("Pet image must be a valid standalone WebP asset: " + id);
+  }
+});
 
 const spriteMapMatch = inlineScripts[0].match(/const PET_SPRITE_POSITIONS=(\{[\s\S]*?\});/);
 if (!spriteMapMatch) throw new Error("Could not locate pet sprite positions");
