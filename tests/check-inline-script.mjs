@@ -89,6 +89,11 @@ if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish
 if (!inlineScripts[0].includes('src="assets/pets/pet-sprite.jpg"')) {
   throw new Error("Pet avatar renderer must load the shared pet sprite sheet");
 }
+const spriteFile = fs.readFileSync(new URL("../assets/pets/pet-sprite.jpg", import.meta.url));
+if (spriteFile.length < 9000 || spriteFile[0] !== 0xff || spriteFile[1] !== 0xd8 || spriteFile[2] !== 0xff) {
+  throw new Error("Pet sprite sheet must be a complete optimized JPEG image");
+}
+
 const spriteMapMatch = inlineScripts[0].match(/const PET_SPRITE_POSITIONS=(\{[\s\S]*?\});/);
 if (!spriteMapMatch) throw new Error("Could not locate pet sprite positions");
 const spriteMap = vm.runInNewContext("(" + spriteMapMatch[1] + ")");
