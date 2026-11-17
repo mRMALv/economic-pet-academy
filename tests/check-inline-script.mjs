@@ -86,8 +86,18 @@ if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wi
 if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
   throw new Error("Every wish must have bilingual titles and a positive integer point cost");
 }
-if (!inlineScripts[0].includes('src="assets/pets/pet-sprite.jpg"')) {
+if (!inlineScripts[0].includes('assets/pets/pet-sprite.jpg')) {
   throw new Error("Pet avatar renderer must load the shared pet sprite sheet");
+}
+
+if (!inlineScripts[0].includes('assets/pets/flyingsquirrel.webp')) {
+  throw new Error("Flying Squirrel must load its standalone high-resolution image");
+}
+const flyingSquirrelFile = fs.readFileSync(new URL("../assets/pets/flyingsquirrel.webp", import.meta.url));
+if (flyingSquirrelFile.length < 10000 ||
+    flyingSquirrelFile.toString("ascii", 0, 4) !== "RIFF" ||
+    flyingSquirrelFile.toString("ascii", 8, 12) !== "WEBP") {
+  throw new Error("Flying Squirrel image must be a valid high-resolution WebP asset");
 }
 const spriteFile = fs.readFileSync(new URL("../assets/pets/pet-sprite.jpg", import.meta.url));
 if (spriteFile.length < 9000 || spriteFile[0] !== 0xff || spriteFile[1] !== 0xd8 || spriteFile[2] !== 0xff) {
