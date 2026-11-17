@@ -86,7 +86,7 @@ if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wi
 if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
   throw new Error("Every wish must have bilingual titles and a positive integer point cost");
 }
-const petImageHelper = inlineScripts[0].match(/function petAvatarHTML\(pet,sizeClass=.*?\n\}/);
+const petImageHelper = inlineScripts[0].match(/function petAvatarHTML\(pet,sizeClass=.*?\n\s*\}/);
 if (!petImageHelper || !/assets\/pets\/\$\{chosen\.id\}\.png/.test(petImageHelper[0])) {
   throw new Error("Pet avatar renderer must load per-species image files");
 }
