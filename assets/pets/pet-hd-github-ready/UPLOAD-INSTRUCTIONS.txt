@@ -1,0 +1,10 @@
+GitHub upload target
+
+Repository: mRMALv/economic-pet-academy
+Branch: feat/hd-pet-avatars-20261117
+Destination: repository root (preserve the assets/pets/ folder)
+
+This archive contains the 12 individual HD WebP files and assets/pets/README.md.
+Upload the files under assets/pets/ to the target branch. Do not upload this
+instructions file into the website. Once the 12 files are present, run the
+repository checks and merge the existing HD pet-avatar change through its PR.
