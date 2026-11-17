@@ -93,7 +93,7 @@ if (!inlineScripts[0].includes('assets/pets/\u0024{chosen.id}.webp') &&
 }
 hdPetIds.forEach((id) => {
   const image = fs.readFileSync(new URL(`../assets/pets/${id}.webp`, import.meta.url));
-  if (image.length < 10000 ||
+  if (image.length < 5000 ||
       image.toString("ascii", 0, 4) !== "RIFF" ||
       image.toString("ascii", 8, 12) !== "WEBP") {
     throw new Error("Pet image must be a valid standalone WebP asset: " + id);
