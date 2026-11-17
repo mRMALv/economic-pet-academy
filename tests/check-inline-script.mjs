@@ -76,4 +76,28 @@ const wishFunction = inlineScripts[0].match(/async function rollNewPetRequest\(\
 if (!wishFunction || !/await persistState\(\)/.test(wishFunction[0])) {
   throw new Error("Wish refresh must await its cloud save");
 }
-console.log("Inline application JavaScript syntax, roster readiness, and balance freshness regressions: OK");
+
+const wishPoolMatch = inlineScripts[0].match(/const WISH_POOL=(\[[\s\S]*?\]);/);
+if (!wishPoolMatch) throw new Error("Could not locate WISH_POOL");
+const wishPool = vm.runInNewContext("(" + wishPoolMatch[1] + ")");
+if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wishPool.length) {
+  throw new Error("Wish pool must contain at least 30 wishes with unique IDs");
+}
+if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
+  throw new Error("Every wish must have bilingual titles and a positive integer point cost");
+}
+const petImageHelper = inlineScripts[0].match(/function petAvatarHTML\(pet,sizeClass=.*?\n\}/);
+if (!petImageHelper || !/assets\/pets\/\$\{chosen\.id\}\.png/.test(petImageHelper[0])) {
+  throw new Error("Pet avatar renderer must load per-species image files");
+}
+if (!inlineScripts[0].includes('id:"alien",nameZH:"三眼仔"') ||
+    !inlineScripts[0].includes('id:"flyingsquirrel",nameZH:"飛鼠"')) {
+  throw new Error("Three-Eyed Alien and Flying Squirrel species must remain available");
+}
+const premiumActions = inlineScripts[0].match(/const PREMIUM_INTERACTIONS=(\[[\s\S]*?\]);/);
+if (!premiumActions || vm.runInNewContext("(" + premiumActions[1] + ")").length < 4 ||
+    !/async function completePremiumInteraction\(action\)[\s\S]*?await sparkSpend\(/.test(inlineScripts[0])) {
+  throw new Error("Premium activities must use the transactional spend ledger");
+}
+
+console.log("Inline JavaScript, balance guards, 36 wishes, pet-image routing, and premium activities: OK");
