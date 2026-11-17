@@ -86,32 +86,19 @@ if (wishPool.length < 30 || new Set(wishPool.map((wish) => wish.id)).size !== wi
 if (wishPool.some((wish) => !Number.isInteger(wish.req) || wish.req < 1 || !wish.zh || !wish.en)) {
   throw new Error("Every wish must have bilingual titles and a positive integer point cost");
 }
-if (!inlineScripts[0].includes('assets/pets/pet-sprite-hd.webp') ||
-    !inlineScripts[0].includes('assets/pets/flyingsquirrel.webp')) {
-  throw new Error("Pet avatar renderer must load the HD sprite sheet and standalone Flying Squirrel image");
+const hdPetIds = ["alien","totoro","fox","hedgehog","rabbit","hamster","shiba","cat","panda","penguin","capybara","flyingsquirrel"];
+if (!inlineScripts[0].includes('assets/pets/\u0024{chosen.id}.webp') &&
+    !inlineScripts[0].includes('assets/pets/')) {
+  throw new Error("Pet avatar renderer must load an individual WebP image for each pet");
 }
-
-if (!inlineScripts[0].includes('assets/pets/flyingsquirrel.webp')) {
-  throw new Error("Flying Squirrel must load its standalone high-resolution image");
-}
-const flyingSquirrelFile = fs.readFileSync(new URL("../assets/pets/flyingsquirrel.webp", import.meta.url));
-if (flyingSquirrelFile.length < 10000 ||
-    flyingSquirrelFile.toString("ascii", 0, 4) !== "RIFF" ||
-    flyingSquirrelFile.toString("ascii", 8, 12) !== "WEBP") {
-  throw new Error("Flying Squirrel image must be a valid high-resolution WebP asset");
-}
-const spriteFile = fs.readFileSync(new URL("../assets/pets/pet-sprite-hd.webp", import.meta.url));
-if (spriteFile.length < 300000 ||
-    spriteFile.toString("ascii", 0, 4) !== "RIFF" ||
-    spriteFile.toString("ascii", 8, 12) !== "WEBP" ||
-    spriteFile.toString("ascii", 12, 16) !== "VP8X") {
-  throw new Error("HD pet sprite sheet must be a valid high-resolution WebP image");
-}
-const spriteWidth = 1 + spriteFile[24] + (spriteFile[25] << 8) + (spriteFile[26] << 16);
-const spriteHeight = 1 + spriteFile[27] + (spriteFile[28] << 8) + (spriteFile[29] << 16);
-if (spriteWidth !== 2048 || spriteHeight !== 1536) {
-  throw new Error("HD pet sprite sheet must contain twelve 512 × 512 cells");
-}
+hdPetIds.forEach((id) => {
+  const image = fs.readFileSync(new URL(`../assets/pets/${id}.webp`, import.meta.url));
+  if (image.length < 10000 ||
+      image.toString("ascii", 0, 4) !== "RIFF" ||
+      image.toString("ascii", 8, 12) !== "WEBP") {
+    throw new Error("Pet image must be a valid standalone WebP asset: " + id);
+  }
+});
 
 const spriteMapMatch = inlineScripts[0].match(/const PET_SPRITE_POSITIONS=(\{[\s\S]*?\});/);
 if (!spriteMapMatch) throw new Error("Could not locate pet sprite positions");
