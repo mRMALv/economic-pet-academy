@@ -125,4 +125,17 @@ if (!premiumActions || vm.runInNewContext("(" + premiumActions[1] + ")").length 
   throw new Error("Premium activities must use the transactional spend ledger");
 }
 
-console.log("Inline JavaScript, balance guards, 36 wishes, pet-image routing, and premium activities: OK");
+const clearDevices = inlineScripts[0].match(/async function adminClearAllDevices\(\)\{[\s\S]*?\n\}/);
+if (!clearDevices) throw new Error("Could not locate the clear-all-devices action");
+if (!clearDevices[0].includes('collection("devices").get()') ||
+    !clearDevices[0].includes('collection("revokedDevices").get()') ||
+    clearDevices[0].includes('students:[]') ||
+    clearDevices[0].includes('collection("studentDirectory")') ||
+    clearDevices[0].includes('collection("transactions")') ||
+    !clearDevices[0].includes('deviceResetPending:true')) {
+  throw new Error("Clear-all-devices must remove device bindings only and preserve roster, balances, pets, and ledgers");
+}
+if (!inlineScripts[0].includes('device.update({studentId:studentId,boundAt:firebase.firestore.FieldValue.serverTimestamp()})')) {
+  throw new Error("A shared device must be able to switch between students");
+}
+console.log("Inline JavaScript, balance guards, 36 wishes, pet-image routing, premium activities, and safe device reset: OK");
