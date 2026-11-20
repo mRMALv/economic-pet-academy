@@ -40,12 +40,17 @@ service cloud.firestore {
         && isBoundStudent(get(devicePath(request.auth.uid)).data.studentId);
     }
 
+    function isDeviceResetPending() {
+      return exists(/databases/$(database)/documents/classrooms/economic-pet-academy)
+        && get(/databases/$(database)/documents/classrooms/economic-pet-academy).data.get('deviceResetPending', false) == true;
+    }
+
     function isBoundStudent(studentId) {
       return isAnonymousStudent()
+        && !isDeviceResetPending()
         && exists(devicePath(request.auth.uid))
         && get(devicePath(request.auth.uid)).data.studentId == studentId
-        && exists(accountPath(studentId))
-        && get(accountPath(studentId)).data.boundUid == request.auth.uid;
+        && exists(accountPath(studentId));
     }
 
     function isStudentAccountReady(account) {
@@ -114,9 +119,23 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll(['studentId', 'boundAt'])
         && request.resource.data.keys().hasOnly(['studentId', 'boundAt'])
         && request.resource.data.studentId is string
-        && getAfter(accountPath(request.resource.data.studentId)).data.boundUid == uid
-        && isStudentAccountReady(getAfter(accountPath(request.resource.data.studentId)).data);
-      allow update, delete: if isTeacher();
+        && !isDeviceResetPending()
+        && exists(accountPath(request.resource.data.studentId))
+        && isStudentAccountReady(get(accountPath(request.resource.data.studentId)).data);
+      allow update: if isTeacher()
+        || (
+          isAnonymousStudent()
+          && request.auth.uid == uid
+          && !isDeviceResetPending()
+          && request.resource.data.keys().hasAll(['studentId', 'boundAt'])
+          && request.resource.data.keys().hasOnly(['studentId', 'boundAt'])
+          && request.resource.data.studentId is string
+          && request.resource.data.boundAt is timestamp
+          && exists(accountPath(request.resource.data.studentId))
+          && isStudentAccountReady(get(accountPath(request.resource.data.studentId)).data)
+          && !exists(revokedDevicePath(uid))
+        );
+      allow delete: if isTeacher();
     }
 
     match /studentAccounts/{studentId} {
@@ -129,15 +148,6 @@ service cloud.firestore {
       allow create, delete: if isTeacher();
 
       allow update: if isTeacher()
-        || (
-          isAnonymousStudent()
-          && resource.data.boundUid == null
-          && isStudentAccountReady(resource.data)
-          && request.resource.data.boundUid == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['boundUid', 'updatedAt'])
-          && getAfter(devicePath(request.auth.uid)).data.studentId == studentId
-          && !exists(revokedDevicePath(request.auth.uid))
-        )
         || (
           isBoundStudent(studentId)
           && isStudentAccountReady(resource.data)

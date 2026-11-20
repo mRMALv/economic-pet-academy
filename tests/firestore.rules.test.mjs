@@ -59,16 +59,10 @@ async function seedAccount(id = "stu-a", values = {}) {
 }
 async function bind(uid = "student-uid", studentId = "stu-a") {
   const db = studentDb(uid);
-  const batch = writeBatch(db);
-  batch.set(doc(db, "devices", uid), {
+  await setDoc(doc(db, "devices", uid), {
     studentId,
     boundAt: serverTimestamp()
   });
-  batch.update(account(db, studentId), {
-    boundUid: uid,
-    updatedAt: serverTimestamp()
-  });
-  await batch.commit();
 }
 async function spend({ uid = "student-uid", studentId = "stu-a", txId = "tx-1", action = "feed", amount = 5 } = {}) {
   const db = studentDb(uid);
@@ -152,18 +146,28 @@ test("teacher can create and manage student accounts", async () => {
   await assertSucceeds(updateDoc(account(db), { earnedScore: 25 }));
 });
 
-test("first device binding must update both device and account atomically", async () => {
+test("a device can bind to a student without making the student exclusive to that device", async () => {
   await seedAccount();
   await assertSucceeds(bind());
   const db = studentDb();
-  assert.equal((await getDoc(account(db))).data().boundUid, "student-uid");
+  assert.equal((await getDoc(account(db))).data().boundUid, null);
   assert.equal((await getDoc(doc(db, "devices", "student-uid"))).data().studentId, "stu-a");
 });
 
-test("a confirmed name selection can claim an unbound student account", async () => {
+test("a confirmed name selection can claim the selected student on this device", async () => {
   await seedAccount();
   await assertSucceeds(bind());
-  assert.equal((await getDoc(account(studentDb()))).data().boundUid, "student-uid");
+  assert.equal((await getDoc(account(studentDb()))).data().boundUid, null);
+  assert.equal((await getDoc(doc(studentDb(), "devices", "student-uid"))).data().studentId, "stu-a");
+});
+
+test("student device binding is paused while the teacher resets all devices", async () => {
+  await seedAccount();
+  const admin = teacherDb();
+  await setDoc(doc(admin, "classrooms", "economic-pet-academy"), { deviceResetPending: true });
+  await assertFails(bind());
+  await updateDoc(doc(admin, "classrooms", "economic-pet-academy"), { deviceResetPending: false });
+  await assertSucceeds(bind());
 });
 
 test("account without migration metadata cannot be bound", async () => {
@@ -193,15 +197,24 @@ test("student cannot spend after a teacher flags the balance for review", async 
   assert.equal((await getDoc(account(teacherDb()))).data().spentScore, 0);
 });
 
-test("device cannot bind to a second student or change its existing binding", async () => {
+test("the same shared device can switch between different student accounts", async () => {
   await seedAccount("stu-a");
   await seedAccount("stu-b");
   await bind("student-uid", "stu-a");
+  await assertSucceeds(bind("student-uid", "stu-b"));
   const db = studentDb();
-  const batch = writeBatch(db);
-  batch.update(account(db, "stu-a"), { boundUid: null });
-  batch.set(doc(db, "devices", "student-uid"), { studentId: "stu-b", boundAt: serverTimestamp() });
-  await assertFails(batch.commit());
+  assert.equal((await getDoc(doc(db, "devices", "student-uid"))).data().studentId, "stu-b");
+  await assertSucceeds(getDoc(account(db, "stu-b")));
+  await assertFails(getDoc(account(db, "stu-a")));
+});
+
+test("one student can sign in from multiple different devices", async () => {
+  await seedAccount("stu-a");
+  await assertSucceeds(bind("device-one", "stu-a"));
+  await assertSucceeds(bind("device-two", "stu-a"));
+  assert.equal((await getDoc(doc(studentDb("device-one"), "devices", "device-one"))).data().studentId, "stu-a");
+  assert.equal((await getDoc(doc(studentDb("device-two"), "devices", "device-two"))).data().studentId, "stu-a");
+  assert.equal((await getDoc(account(teacherDb(), "stu-a"))).data().boundUid, null);
 });
 
 test("student can atomically spend an allowed amount and create its ledger record", async () => {
@@ -353,7 +366,7 @@ test("teacher can read spend history and student cannot read another student's h
   await assertFails(getDocs(collection(studentDb(), "studentAccounts", "stu-b", "transactions")));
 });
 
-test("students cannot create their own account or bind without the paired device document", async () => {
+test("students cannot create their own account or write another device's binding", async () => {
   await seedAccount();
   const db = studentDb();
   await assertFails(setDoc(account(db), {
@@ -361,13 +374,16 @@ test("students cannot create their own account or bind without the paired device
     boundUid: "student-uid", lastTransactionId: null
   }));
   await assertFails(updateDoc(account(db), { boundUid: "student-uid" }));
+  await assertFails(setDoc(doc(db, "devices", "other-uid"), {
+    studentId: "stu-a", boundAt: serverTimestamp()
+  }));
 });
 
-test("a second anonymous UID cannot claim an already-bound student", async () => {
+test("a second anonymous UID can also sign in to the same student", async () => {
   await seedAccount();
-  await bind("first-uid", "stu-a");
-  await assertFails(bind("second-uid", "stu-a"));
-  assert.equal((await getDoc(account(teacherDb()))).data().boundUid, "first-uid");
+  await assertSucceeds(bind("first-uid", "stu-a"));
+  await assertSucceeds(bind("second-uid", "stu-a"));
+  assert.equal((await getDoc(account(teacherDb()))).data().boundUid, null);
 });
 
 test("transaction IDs cannot be replayed", async () => {
@@ -390,9 +406,10 @@ test("concurrent spends cannot exceed the available balance", async () => {
   assert.equal((await getDoc(account(studentDb()))).data().spentScore, 25);
 });
 
-test("teacher can revoke a device and a new UID can claim the account", async () => {
+test("teacher can revoke one device while another device can still access the same student", async () => {
   await seedAccount();
   await bind("old-uid", "stu-a");
+  await bind("other-uid", "stu-a");
   const admin = teacherDb();
   const batch = writeBatch(admin);
   batch.set(doc(admin, "revokedDevices", "old-uid"), {
@@ -402,8 +419,9 @@ test("teacher can revoke a device and a new UID can claim the account", async ()
   batch.update(account(admin), { boundUid: null });
   await assertSucceeds(batch.commit());
 
-  await assertFails(bind("old-uid", "stu-a"));
+  await assertFails(getDoc(account(studentDb("old-uid"))));
+  await assertSucceeds(getDoc(account(studentDb("other-uid"))));
   await assertSucceeds(bind("new-uid", "stu-a"));
-  assert.equal((await getDoc(account(admin))).data().boundUid, "new-uid");
+  assert.equal((await getDoc(account(admin))).data().boundUid, null);
 });
 
