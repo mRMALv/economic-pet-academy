@@ -42,7 +42,7 @@ service cloud.firestore {
 
     function isDeviceResetPending() {
       return exists(/databases/$(database)/documents/classrooms/economic-pet-academy)
-        && get(/databases/$(database)/documents/classrooms/economic-pet-academy).data.deviceResetPending == true;
+        && get(/databases/$(database)/documents/classrooms/economic-pet-academy).data.get('deviceResetPending', false) == true;
     }
 
     function isBoundStudent(studentId) {
