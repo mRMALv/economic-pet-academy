@@ -135,7 +135,7 @@ if (!clearDevices[0].includes('collection("devices").get()') ||
     !clearDevices[0].includes('deviceResetPending:true')) {
   throw new Error("Clear-all-devices must remove device bindings only and preserve roster, balances, pets, and ledgers");
 }
-const bindingFunction = inlineScripts[0].match(/async function sparkBindStudent\(studentId,allowAuthRefresh=true\)\{[\\s\\S]*?\n\}/);
+const bindingFunction = inlineScripts[0].match(/async function sparkBindStudent\(studentId,allowAuthRefresh=true\)\{[\s\S]*?\n\}/);
 if (!bindingFunction ||
     !bindingFunction[0].includes("firestoreDb.runTransaction") ||
     !bindingFunction[0].includes("tx.get(revoked)") ||
@@ -145,14 +145,14 @@ if (!bindingFunction ||
     bindingFunction[0].includes("await device.get()")) {
   throw new Error("Student device binding must atomically check revocation and switch shared devices, with only one auth refresh retry");
 }
-const confirmLogin = inlineScripts[0].match(/async function confirmStudentSelection\(\)\{[\\s\\S]*?\n\}/);
+const confirmLogin = inlineScripts[0].match(/async function confirmStudentSelection\(\)\{[\s\S]*?\n\}/);
 if (!confirmLogin ||
     !confirmLogin[0].includes("studentLoginInProgress") ||
     !confirmLogin[0].includes('button.disabled=true') ||
     !confirmLogin[0].includes('select.disabled=true')) {
   throw new Error("Student name selection must prevent repeated submissions while login is running");
 }
-const enterStudent = inlineScripts[0].match(/async function enterLockedStudentMode\(id,silent=false\)\{[\\s\\S]*?\n\}/);
+const enterStudent = inlineScripts[0].match(/async function enterLockedStudentMode\(id,silent=false\)\{[\s\S]*?\n\}/);
 if (!enterStudent ||
     !enterStudent[0].includes("Promise.all([sparkAccountRef(id).get(),classroomRef().get()])") ||
     !enterStudent[0].includes("sparkLoadTransactions(id).then") ||
