@@ -119,6 +119,32 @@ if (!inlineScripts[0].includes('id:"alien",nameZH:"三眼仔"') ||
     !inlineScripts[0].includes('id:"flyingsquirrel",nameZH:"飛鼠"')) {
   throw new Error("Three-Eyed Alien and Flying Squirrel species must remain available");
 }
+const petSpeciesMatch = inlineScripts[0].match(/const PET_SPECIES=(\[[\s\S]*?\]);/);
+const personalitiesMatch = inlineScripts[0].match(/const PERSONALITIES=(\{[\s\S]*?\n\});/);
+if (!petSpeciesMatch || !personalitiesMatch) {
+  throw new Error("Could not locate pet species and personality definitions");
+}
+const petSpecies = vm.runInNewContext("(" + petSpeciesMatch[1] + ")");
+const personalities = vm.runInNewContext("(" + personalitiesMatch[1] + ")");
+const updatedPersonalities = {
+  shiba: "調皮",
+  rabbit: "暴躁",
+  hamster: "膽小"
+};
+for (const [petId, personality] of Object.entries(updatedPersonalities)) {
+  const pet = petSpecies.find(item => item.id === petId);
+  if (!pet || pet.personality !== personality) {
+    throw new Error("Unexpected personality for " + petId + "; expected " + personality);
+  }
+  const dialogue = personalities[personality];
+  if (!dialogue || !["low", "high", "feed", "bathe", "play"].every(key => typeof dialogue[key] === "string" && dialogue[key].length > 0)) {
+    throw new Error("Personality dialogue is incomplete for " + petId + " (" + personality + ")");
+  }
+}
+if (petSpecies.some(pet => !personalities[pet.personality])) {
+  throw new Error("Every pet species must reference a defined personality");
+}
+
 const premiumActions = inlineScripts[0].match(/const PREMIUM_INTERACTIONS=(\[[\s\S]*?\]);/);
 if (!premiumActions || vm.runInNewContext("(" + premiumActions[1] + ")").length < 4 ||
     !/async function completePremiumInteraction\(action\)[\s\S]*?await sparkSpend\(/.test(inlineScripts[0])) {
