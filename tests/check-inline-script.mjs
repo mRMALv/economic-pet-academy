@@ -135,7 +135,31 @@ if (!clearDevices[0].includes('collection("devices").get()') ||
     !clearDevices[0].includes('deviceResetPending:true')) {
   throw new Error("Clear-all-devices must remove device bindings only and preserve roster, balances, pets, and ledgers");
 }
-if (!inlineScripts[0].includes('device.update({studentId:studentId,boundAt:firebase.firestore.FieldValue.serverTimestamp()})')) {
-  throw new Error("A shared device must be able to switch between students");
+const bindingFunction = inlineScripts[0].match(/async function sparkBindStudent\(studentId,allowAuthRefresh=true\)\{[\s\S]*?\n\}/);
+if (!bindingFunction ||
+    !bindingFunction[0].includes("firestoreDb.runTransaction") ||
+    !bindingFunction[0].includes("tx.get(revoked)") ||
+    !bindingFunction[0].includes("tx.get(device)") ||
+    !bindingFunction[0].includes("tx.set(device") ||
+    !bindingFunction[0].includes("return sparkBindStudent(studentId,false)") ||
+    bindingFunction[0].includes("await device.get()")) {
+  throw new Error("Student device binding must atomically check revocation and switch shared devices, with only one auth refresh retry");
+}
+const confirmLogin = inlineScripts[0].match(/async function confirmStudentSelection\(\)\{[\s\S]*?\n\}/);
+if (!confirmLogin ||
+    !confirmLogin[0].includes("studentLoginInProgress") ||
+    !confirmLogin[0].includes('button.disabled=true') ||
+    !confirmLogin[0].includes('select.disabled=true')) {
+  throw new Error("Student name selection must prevent repeated submissions while login is running");
+}
+const enterStudent = inlineScripts[0].match(/async function enterLockedStudentMode\(id,silent=false\)\{[\s\S]*?\n\}/);
+if (!enterStudent ||
+    !enterStudent[0].includes("Promise.all([sparkAccountRef(id).get(),classroomRef().get()])") ||
+    !enterStudent[0].includes("sparkLoadTransactions(id).then") ||
+    enterStudent[0].indexOf("openPetWizard(false)") > enterStudent[0].indexOf("sparkLoadTransactions(id).then")) {
+  throw new Error("Student pet selection must open after essential account reads without waiting for transaction history");
+}
+if (inlineScripts[0].includes("這不一定代表已有其他裝置登入")) {
+  throw new Error("A generic Firebase permission error must not be described as another device binding");
 }
 console.log("Inline JavaScript, balance guards, 36 wishes, pet-image routing, premium activities, and safe device reset: OK");
